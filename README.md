@@ -9,5 +9,5 @@ AVR-PC Specs :
 * SRAM as VRAM : 16Ko at 8bits, or 8Ko at 16Bits
 * VGA Output : 128x64 @16bit, 60Hz
 
-I was inspired a lot from Ben Eater, especially for the VGA protcol.
+I was inspired a lot from Ben Eater, mainly for the VGA protcol.
 His website : https://eater.net/vga
