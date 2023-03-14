@@ -6,6 +6,7 @@
 	.def AddressY = r18
 	.def IsW = r25
 	.def IsOk = r26
+	.def IsPressed = r27
 	.def button = r24
 
 	.equ BackColor = 0x0000	;BBBBBGGGGGGRRRRR  (5-6-5)
@@ -24,7 +25,6 @@
 
 	out DDRC, r19			;set the output pin to output
 	out DDRB, r19
-	ldi r19, 0b00111111
 	out DDRD, r19
 	out DDRA, r29
 	ldi	DataL, LOW(BackColor)
@@ -32,20 +32,7 @@
 	rjmp outputAll
 
 loop:
-	in button, PIND
-	andi button, 0b10000000
-	cpi button, 0b10000000
-	breq IsPress
-	rjmp loop
-
-IsPress:
-	sbi	PORTD,PIND1		
-	in button, PIND						
-	andi button, 0b10000000
-	cpi button, 0b00000000
-	breq IsPress
-	cbi	PORTD,PIND1	
-	in button, PINA						;SYSCALLS
+	in button, PINA
 	andi button, 0b11111100
 	cpi button, 0b00000100
 	breq IsPress1
@@ -55,52 +42,55 @@ IsPress:
 	breq IsPress2
 	in button, PINA
 	andi button, 0b11111100
-	cpi button, 0b00001100
+	cpi button, 0b00010000
 	breq IsPress3
 	in button, PINA
 	andi button, 0b11111100
-	cpi button, 0b00010000
+	cpi button, 0b00100000
 	breq IsPress4
+	ldi IsPressed, 0x00
 	rjmp loop
 
-IsPress1:								;SYSCALL 0x01
-	in button, PINA						
-	andi button, 0b11111100
-	sts PosX, button
-	sbi	PORTD,PIND1		
-	in button, PIND						
-	andi button, 0b10000000
-	sts PosY, button
+IsPress1:
+	cpi IsPressed, 0x00
+	breq action1
 	rjmp loop
 
-IsPress2:								;SYSCALL 0x02
+IsPress2:
+	cpi IsPressed, 0x00
 	breq action2
 	rjmp loop
 
-IsPress3:								;SYSCALL 0x03
+IsPress3:
+	cpi IsPressed, 0x00
 	breq action3
 	rjmp loop
 
-IsPress4:								;SYSCALL 0x04
+IsPress4:
+	cpi IsPressed, 0x00
 	breq action4
 	rjmp loop
 
 action1:
+	ldi IsPressed, 0x01
 	ldi	DataL, 0xff
 	ldi	DataH, 0x00
 	rjmp outputAll
 
 action2:
+	ldi IsPressed, 0x01
 	ldi	DataL, 0xff
 	ldi	DataH, 0xff
 	rjmp outputAll
 
 action3:
+	ldi IsPressed, 0x01
 	ldi	DataL, 0x00
 	ldi	DataH, 0xff
 	rjmp outputAll
 
 action4:
+	ldi IsPressed, 0x01
 	ldi	DataL, 0x00
 	ldi	DataH, 0x00
 	rjmp outputAll
@@ -141,9 +131,3 @@ upY:
 
 loopR:
 	jmp loop
-
-
-		.dseg
-		.org	SRAM_START
-PosX:	.byte	1
-PosY:	.byte	1
