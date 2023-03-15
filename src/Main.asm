@@ -147,6 +147,17 @@ upY:
 loopR:
 	jmp loop
 
+outputPix: 
+  
+  in IsW, PINA             ;read PORTA    andi IsW, 0b00000001     ;apply a mask to get the first bit    subi IsW, 0x01           ;substact 1    brne outputPix           ;jump to output if it's not nul, so when input is 0    out PORTC,DataL                        ;output the first 8bit data to PORTC        out PORTA, r29   ;toggle the clock     out PORTC,DataH                        ;output the last 8bit data to PORTC       out PORTA, r31   ;toggle the clock  
+  out PORTD, AddressY    add AddressX, r30                 
+  out PORTB,AddressX 
+  sub AddressX, r30 
+  out PORTB, r31 
+  out PORTD, r31 
+  out PORTC, r31            out PORTA, r29      ;toggle the clock     out PORTA, r31      ;toggle the clock  
+  rjmp loop
+
 
 		.dseg
 		.org	SRAM_START
