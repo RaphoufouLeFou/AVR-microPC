@@ -66,11 +66,13 @@ IsPress:
 IsPress1:								;SYSCALL 0x01
 	in button, PINA						
 	andi button, 0b11111100
-	sts PosX, button
+	mov AddressX, button
 	sbi	PORTD,PIND1		
 	in button, PIND						
 	andi button, 0b10000000
-	sts PosY, button
+lsr
+	mov AddressY, button
+ 
 	rjmp loop
 
 IsPress2:								;SYSCALL 0x02
