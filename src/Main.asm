@@ -67,13 +67,16 @@ IsPress1:								;SYSCALL 0x01
 	in button, PINA						
 	andi button, 0b11111100
 	mov AddressX, button
+ lsr AddressX
+ in button, PIND
+ andi button 0b10000000
+ add AddressX, button
+ lsr AddressX 
 	sbi	PORTD,PIND1		
 	in button, PIND						
-	andi button, 0b10000000
-lsr
+	andi button, 0b11111100
 	mov AddressY, button
- 
-	rjmp loop
+	rjmp outputPix
 
 IsPress2:								;SYSCALL 0x02
 	breq action2
