@@ -401,7 +401,7 @@ O7:
 	add AddressY, r16
 	inc Pixel
 	rjmp outputPix
-	
+	; no found lol
 O8:	inc AddressX
 	subi AddressY, 8
 	inc Pixel
