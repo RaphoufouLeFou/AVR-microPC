@@ -14,7 +14,7 @@
 
 ;   0x0109 : temp7  aka dx
 ;   0x010A : temp6  aka dy
-;   0x010B : temp5
+;   0x010B : temp5  aka addressY buffer
 ;   0x010C : temp4
 ;   0x010D : temp3
 ;   0x010E : temp2
@@ -135,7 +135,7 @@
     .def temp4 = r16    ; duplicate ! remember to clr after use
 
 
-	.equ	oVal 	= 54		        ;Delay
+	.equ	oVal 	= 2		        ;Delay
 	.equ	iVal 	= 0xFFFF		;Precision of delay
 
     clr itt                 ;reset registers to 0x00
@@ -152,8 +152,15 @@
     out DDRC, temp			;set the output pin to output
 	out DDRB, temp          ;
 	out DDRD, temp          ;
-    ldi temp, 0b11110110    ;
+    ldi temp, 0b00000010    ;
     out DDRA, temp          ;
+
+    ldi temp, DefPposX      ;set the player position
+    mov PposX, temp         ;
+    ldi temp, DefPposY      ;
+    mov PposY, temp         ;
+    ldi temp, DefPposZ      ;
+    mov PposZ, temp         ;
 
 	ldi	ZL, LOW(starting)   ;set the Z pointer to the starting point
     ldi	ZH, HIGH(starting)  ;
@@ -246,18 +253,51 @@ here:                       ;debug function, to test the divition function
     lsl AddressY            ;
     rjmp outputPix          ;output the pixel
 
+GetInput:
+    in temp, PINA           ;get the input from PORTA
+    andi temp, 0b11111100   ;apply a mask to get the first bit
+    mov temp2, temp         ;store the input in temp2
+    andi temp2, 0b00000100  ;apply a mask to get the third bit
+    cpi temp2, 0x00         ;check if the second bit is 0
+    breq skipDoZ            ;if it's 0, skip the Z position change
+    dec PposZ               ;decrease the Z position
+skipDoZ:
+    mov temp2, temp         ;store the input in temp2
+    andi temp2, 0b00001000  ;apply a mask to get the fourth bit
+    cpi temp2, 0x00         ;check if the fourth bit is 0
+    breq skipUpZ            ;if it's 0, skip the X position change
+    inc PposZ               ;decrease the X position
+skipUpZ:
+    mov temp2, temp         ;store the input in temp2
+    andi temp2, 0b01000000  ;apply a mask to get the seventh bit
+    cpi temp2, 0x00         ;check if the second bit is 0
+    breq skipDoX            ;if it's 0, skip the X position change
+    inc PposX               ;decrease the X position
+skipDoX:
+    mov temp2, temp         ;store the input in temp2
+    andi temp2, 0b00010000  ;apply a mask to get the eighth bit
+    cpi temp2, 0x00         ;check if the fourth bit is 0
+    breq skipUpX            ;if it's 0, skip the X position change
+    dec PposX               ;decrease the X position
+skipUpX:
+    mov temp2, temp         ;store the input in temp2
+    andi temp2, 0b10000000  ;apply a mask to get the second bit
+    cpi temp2, 0x00         ;check if the second bit is 0
+    breq skipDoY            ;if it's 0, skip the Y position change
+    inc PposY               ;decrease the Y position
+skipDoY:
+    mov temp2, temp         ;store the input in temp2
+    andi temp2, 0b00100000  ;apply a mask to get the fifth bit
+    cpi temp2, 0x00         ;check if the fourth bit is 0
+    breq skipUpY            ;if it's 0, skip the Y position change
+    dec PposY               ;decrease the Y position
+skipUpY:
+    ijmp                    ;return to the Z pointer address
+
+
 starting:
     ldi XL, 0x00            ;Get the X size and position
     ldi XH, 0x01            ;
-
-    ldi temp, DefPposX      ;set the player position
-    add temp, shift         ;add the shift to the position
-    mov PposX, temp         ;
-    ldi temp, DefPposY      ;
-    mov PposY, temp         ;
-    ldi temp, DefPposZ      ;
-    mov PposZ, temp         ;
-
     ldi temp, DefXsize    ;X size
     st X+, temp
     ldi temp, DefXpos     ;X position
@@ -284,6 +324,10 @@ starting:
 
 end:
     ;jmp end
+    ldi ZL, LOW(endGetInput)   ;set the Z pointer to the endGetInput point
+    ldi ZH, HIGH(endGetInput)  ;
+    rjmp GetInput              ;get the input from the user
+endGetInput:
     dec shift           ;decrease the shift
     ldi temp, -20       
     cp shift, temp      ;compare the shift to -20
@@ -640,6 +684,10 @@ skipneg2:
 lineloop:
     ldi ZL, LOW(lineRetLoop)    ;set the Z pointer to the return point
     ldi ZH, HIGH(lineRetLoop)   ;
+    ldi XL, 0x0B
+    st X, AddressY
+    cpi AddressY, 0x3F
+    brpl lineRetLoop
     lsl AddressY        ;shift the Y address, to let the TX and RX pins free
     lsl AddressY        ;
     clr empty           ;reset empty to 0
@@ -647,8 +695,7 @@ lineloop:
     rjmp outputPix      ;output the pixel
 lineRetLoop:
     ;jmp end
-    lsr AddressY        ;but back the Y address to it's original value
-    lsr AddressY        ;
+    ld AddressY, X      ;restore the Y address
 
     mov temp2, temp     ;store the distance between the two vertices
     lsl temp2           ;multiply the distance by 2
@@ -684,12 +731,15 @@ endfirst:
 second:
     add temp, temp3     ;add the temp value to the error
     add AddressY, temp4 ;add the temp value to the Y address (-1 or 1)
+    
 endsecond:
 
     ;jmp lineloop
     ld temp3, -Y        ;get the distance between the two vertices
     ld temp3, Y+        ;
     ld temp4, Y         ;
+    cpi AddressX, 0x80  ;check if the X address is overflown
+    brpl beforeLine2          ;if it's overflown, jump to the beforeLine2 function
     cp AddressX, temp3  ;check if the X address is equal to the distance between the two vertices
     brne lineloop            ;lineloop
     cp AddressY, temp4  ;check if the Y address is equal to the distance between the two vertices
@@ -761,6 +811,10 @@ skipneg22:
 lineloop2:
     ldi ZL, LOW(lineRetLoop2)
     ldi ZH, HIGH(lineRetLoop2)
+    ldi XL, 0x0B
+    st X, AddressY
+    cpi AddressY, 0x3F
+    brpl lineRetLoop2
     lsl AddressY
     lsl AddressY
     clr empty
@@ -768,8 +822,7 @@ lineloop2:
     rjmp outputPix
 lineRetLoop2:
     ;jmp end
-    lsr AddressY
-    lsr AddressY
+    ld AddressY, X      ;restore the Y address
 
     mov temp2, temp
     lsl temp2
@@ -811,6 +864,8 @@ endsecond2:
     ld temp3, -Y
     ld temp3, Y+
     ld temp4, Y
+    cpi AddressX, 0x80  ;check if the X address is overflown
+    brpl beforeLine3          ;if it's overflown, jump to the beforeLine2 function
     cp AddressX, temp3
     brne lineloop2            ;lineloop
     cp AddressY, temp4 
@@ -887,6 +942,10 @@ skipneg23:
 lineloop3:
     ldi ZL, LOW(lineRetLoop3)
     ldi ZH, HIGH(lineRetLoop3)
+    ldi XL, 0x0B
+    st X, AddressY
+    cpi AddressY, 0x3F
+    brpl lineRetLoop3
     lsl AddressY
     lsl AddressY
     clr empty
@@ -894,8 +953,7 @@ lineloop3:
     rjmp outputPix
 lineRetLoop3:
     ;jmp end
-    lsr AddressY
-    lsr AddressY
+    ld AddressY, X      ;restore the Y address
 
     mov temp2, temp
     lsl temp2
@@ -937,6 +995,8 @@ endsecond3:
     ld temp3, -Y
     ld temp3, Y+
     ld temp4, Y
+    cpi AddressX, 0x80  ;check if the X address is overflown
+    brpl beforeLine4          ;if it's overflown, jump to the beforeLine2 function
     cp AddressX, temp3
     brne lineloop3            ;lineloop
     cp AddressY, temp4 
@@ -1015,6 +1075,10 @@ skipneg24:
 lineloop4:
     ldi ZL, LOW(lineRetLoop4)
     ldi ZH, HIGH(lineRetLoop4)
+    ldi XL, 0x0B
+    st X, AddressY
+    cpi AddressY, 0x3F
+    brpl lineRetLoop4
     lsl AddressY
     lsl AddressY
     clr empty
@@ -1022,8 +1086,7 @@ lineloop4:
     rjmp outputPix
 lineRetLoop4:
     ;jmp end
-    lsr AddressY
-    lsr AddressY
+    ld AddressY, X      ;restore the Y address
 
     mov temp2, temp
     lsl temp2
@@ -1058,6 +1121,8 @@ endfirst4:
     brpl endsecond4
 second4:
     add temp, temp3
+    cpi AddressY, 0x00
+    brpl lineRetLoop
     add AddressY, temp4
 endsecond4:
 
@@ -1065,6 +1130,8 @@ endsecond4:
     ld temp3, -Y
     ld temp3, Y+
     ld temp4, Y
+    cpi AddressX, 0x80  ;check if the X address is overflown
+    brpl PointDraw          ;if it's overflown, jump to the beforeLine2 function
     cp AddressX, temp3
     brne lineloop4            ;lineloop
     cp AddressY, temp4 
