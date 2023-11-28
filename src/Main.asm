@@ -95,7 +95,6 @@
 ;    subi AddressY, 0
 ;    lsl AddressY
 ;    lsl AddressY
-;    clr empty
 ;    rjmp outputPix
 
 
@@ -109,6 +108,7 @@
     .def dd16uH	=r12        ;
     .def dv16uL	=r9         ;
     .def dcnt16u =r10       ;
+
     .def itt = r7           ; Itterator
     .def shift = r5         ; Cube shift for each frame
     .def Rfov = r6          ; fov register
@@ -125,14 +125,11 @@
 	.def DataH = r21        ; 
 	.def AddressX = r17     ; Pixel address registers
 	.def AddressY = r18     ;
-    .def writeEnable = r23  ; Write Constant enable register
-    .def clock = r24        ; Clock Constant register
     .def IsW = r25          ; Input register buffer
-	.def empty = r16        ; empty register
 	.def temp2 = r20        ; temporary register
 	.def temp = r19         ;
-    .def temp3 = r25    ; duplicate !
-    .def temp4 = r16    ; duplicate ! remember to clr after use
+    .def temp3 = r24        ;
+    .def temp4 = r16        ;
 
 
 	.equ	oVal 	= 2		        ;Delay
@@ -143,10 +140,7 @@
 	clr DataH               ;
     clr AddressX            ;
 	clr AddressY            ;
-    clr empty               ;
     clr shift               ;   
-    ldi writeEnable, 0b10000000 ;set write enable constant
-    ldi clock, 0x02             ;set clock constant
     ldi temp, 0xFF          ;set temp to 0xFF
 
     out DDRC, temp			;set the output pin to output
@@ -244,7 +238,6 @@ here:                       ;debug function, to test the divition function
     ldi	ZH, HIGH(end)       ;
     ldi DataH, 0xFF         ;set the color to white
     ldi DataL, 0xFF         ;
-    clr empty
     mov AddressX, dres16uL  ;set the X position to the result of the divition
     mov AddressY, dres16uL  ;set the Y position to the result of the divition
     subi AddressX, 2        ;set the exepted result, so if they are equal, the pixel will be at 0,0
@@ -370,36 +363,42 @@ outputPix:                  ;output the pixel to the screen
 	subi IsW, 0x01			;substact 1
 	brne outputPix			;jump to output if it's not nul, so when input is 0
 	out PORTC,DataL			;output the first 8bit data to PORTC	
-	out PORTA, clock		;toggle the clock 
+    ldi IsW, 0x02
+	out PORTA, IsW		    ;toggle the clock 
 	out PORTC,DataH			;output the last 8bit data to PORTC	
-	out PORTA, empty		;toggle the clock 
+    clr IsW
+	out PORTA, IsW		    ;toggle the clock 
 	out PORTD, AddressY		;output the Y address to PORTD
-	add AddressX, writeEnable	;add the write enable constant to the X address
+	subi AddressX, -0b10000000	;add the write enable constant to the X address
 	out PORTB,AddressX          ;output the X address to PORTB
-	sub AddressX, writeEnable   ;substract the write enable constant from the X address
-	out PORTB, empty            ;Clear the ports
-	out PORTD, empty            ;
-	out PORTC, empty            ;
-	out PORTA, clock			;toggle the clock 
-	out PORTA, empty			;toggle the clock 
+	subi AddressX, 0b10000000   ;substract the write enable constant from the X address
+	out PORTB, IsW          ;Clear the ports
+	out PORTD, IsW          ;
+	out PORTC, IsW          ;
+    ldi IsW, 0x02
+	out PORTA, IsW			;toggle the clock 
+    clr IsW
+	out PORTA, IsW			;toggle the clock 
 	ijmp                    ;return to the Z pointer address
 
 
 outputAll:
 
 	out PORTC,DataL			;output the first 8bit data to PORTC	
-	out PORTA, clock		;toggle the clock 
+    ldi IsW, 0x02
+	out PORTA, IsW		;toggle the clock 
 	out PORTC,DataH			;output the last 8bit data to PORTC	
-	out PORTA, empty		;toggle the clock 
+    clr IsW
+	out PORTA, IsW		;toggle the clock 
 whait:
 	in IsW, PINA			;read PORTA
 	andi IsW, 0b00000001	;apply a mask to get the first bit
 	subi IsW, 0x01			;substact 1
 	brne whait				;jump to output if it's not nul, so when input is 0
 	out PORTD, AddressY     ;output the Y address to PORTD
-	add AddressX, writeEnable   ;add the write enable constant to the X address
+	subi AddressX, -0b10000000;add the write enable constant to the X address
 	out PORTB,AddressX          ;output the X address to PORTB
-	sub AddressX, writeEnable   ;substract the write enable constant from the X address
+	subi AddressX, 0b10000000   ;substract the write enable constant from the X address
 	out PORTB,AddressX      ;output the X address to PORTB
 	inc AddressX            ;increase the X address
 	cpi AddressX, 0x80      ;compare the X address to 0x80
@@ -407,7 +406,8 @@ whait:
     
     clr AddressX            ;reset the X address to 0
 	cpi AddressY, 0xFC      ;compare the Y address to 0xFC
-	out PORTC, empty	    ;Clear the ports
+    clr IsW
+	out PORTC, IsW	    ;Clear the ports
 	breq start              ;if it's 0xFC, jump to the start point
     subi AddressY, -0b00000100  ;add 4 from the Y address
 	rjmp whait              ;jump to the whait loop
@@ -690,8 +690,6 @@ lineloop:
     brpl lineRetLoop
     lsl AddressY        ;shift the Y address, to let the TX and RX pins free
     lsl AddressY        ;
-    clr empty           ;reset empty to 0
-    clr temp3           ;reset temp3 to 0
     rjmp outputPix      ;output the pixel
 lineRetLoop:
     ;jmp end
@@ -817,8 +815,6 @@ lineloop2:
     brpl lineRetLoop2
     lsl AddressY
     lsl AddressY
-    clr empty
-    clr temp3
     rjmp outputPix
 lineRetLoop2:
     ;jmp end
@@ -948,8 +944,6 @@ lineloop3:
     brpl lineRetLoop3
     lsl AddressY
     lsl AddressY
-    clr empty
-    clr temp3
     rjmp outputPix
 lineRetLoop3:
     ;jmp end
@@ -995,7 +989,7 @@ endsecond3:
     ld temp3, -Y
     ld temp3, Y+
     ld temp4, Y
-    cpi AddressX, 0x80  ;check if the X address is overflown
+    cpi AddressX, 0x80        ;check if the X address is overflown
     brpl beforeLine4          ;if it's overflown, jump to the beforeLine2 function
     cp AddressX, temp3
     brne lineloop3            ;lineloop
@@ -1081,8 +1075,6 @@ lineloop4:
     brpl lineRetLoop4
     lsl AddressY
     lsl AddressY
-    clr empty
-    clr temp3
     rjmp outputPix
 lineRetLoop4:
     ;jmp end
@@ -1122,7 +1114,7 @@ endfirst4:
 second4:
     add temp, temp3
     cpi AddressY, 0x00
-    brpl lineRetLoop
+    brpl lineRetLoop4
     add AddressY, temp4
 endsecond4:
 
@@ -1166,7 +1158,6 @@ PointDraw:            ;draw the points at the vertices in red
 testPrintpoints:
     ld AddressX, X+     ;get the X address of the vertex
     ld AddressY, X+     ;
-    clr empty           ;reset empty to 0
     ldi ZL, LOW(endPrintpoints)     ;set the Z pointer to the return point
     ldi ZH, HIGH(endPrintpoints)    ;
     lsl AddressY    ;shift the Y address, to let the TX and RX pins free
