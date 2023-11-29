@@ -23,7 +23,8 @@ His website : https://eater.net/vga
 | Fade           | asm       | Fade red to black, then blue to black, and Green to black, then repeat               |
 | HelloWorld     | asm       | Displays "HELLO LEO LOL" on the screen                                               |
 | Main copy      | asm       | some test with the RAM (NWY)                                                         |
-| Main           | asm       | a 3d renderer that can draws custom cubes in real time, all in asm                   |
+| Renderer8bit   | asm       | a 3d renderer that can draws custom cubes in real time, all in asm                   |
+| Main           | asm       | an other 3d renderer that can draws custom cubes in real time, using 16 fixed points |
 | Main_C1/C2     | asm       | some test to make the 2 CPU communicate and display a 16K+ image on the screen (NWY) |
 | Snake          | asm       | some test for a snake game (NWY)                                                     |
 | UART           | asm       | Uart communication beetwen the AVR-microPC and a computer                            |

@@ -1,142 +1,89 @@
-; 3d renderer in assembler using 16 bit fixed points numbers
+; 3d renderer in assembler using 8bit values
 
 ; RAM addresses : 
 ;
-;   0x0100 : X size L
-;   0x0101 : X size H
-;   0x0102 : X position L
-;   0x0103 : X position H
-;   0x0104 : Y size L
-;   0x0105 : Y size H
-;   0x0106 : Y position L
-;   0x0107 : Y position H
-;   0x0108 : Z size L
-;   0x0109 : Z size H
-;   0x010A : Z position L
-;   0x010B : Z position H
+;   0x0100 : X size
+;   0x0101 : X position
+;   0x0102 : Y size
+;   0x0103 : Y position
+;   0x0104 : Z size
+;   0x0105 : Z position
+;   0x0106 : fov
+;   0x0107 : textureL
+;   0x0108 : textureH
 
-;   0x010C : fov
-;   0x010D : texture L
-;   0x010E : texture H
+;   0x0109 : temp7  aka dx
+;   0x010A : temp6  aka dy
+;   0x010B : temp5  aka addressY buffer
+;   0x010C : temp4
+;   0x010D : temp3
+;   0x010E : temp2
+;   0x010F : temp1
 
-;   0x010F : temp   aka dx
-;   0x0110 : temp   aka dy
-;   0x0111 : temp
-;   0x0112 : temp
-;   0x0113 : temp
-;   0x0114 : temp
-;   0x0115 : temp
-;   0x0116 : temp
+;   0x0110 : ret1
+;   0x0111 : ret2
+;   0x0112 : ret3
+;   0x0113 : ret4
+;   0x0114 : ret5
 
-;   0x0117 : ret1 L
-;   0x0118 : ret1 H
-;   0x0119 : ret2 L
-;   0x011A : ret2 H
-;   0x011B : ret3 L
-;   0x011C : ret3 H
-;   0x011D : ret4 L
-;   0x011E : ret4 H
-;   0x011F : ret5 L
-;   0x0120 : ret5 H
+;   0x0115 : temp   aka sx
+;   0x0116 : temp   aka sy
+;   0x0117 : temp
+;   0x0118 : temp
+;   0x0119 : temp
+;   0x011A : temp
+;   0x011B : temp
+;   0x011C : temp
+;   0x011D : temp
+;   0x011E : temp
+;   0x011F : temp
 
-;   0x0121 : temp   aka sx
-;   0x0122 : temp   aka sy
-;   0x0123 : temp
-;   0x0124 : temp
-;   0x0125 : temp
-;   0x0126 : temp
-;   0x0127 : temp
-;   0x0128 : temp
+;   0x0120 : vertex0X
+;   0x0121 : vertex0Y
+;   0x0122 : vertex0Z
+;   0x0123 : vertex1X
+;   0x0124 : vertex1Y
+;   0x0125 : vertex1Z
+;   0x0126 : vertex2X
+;   0x0127 : vertex2Y
+;   0x0128 : vertex2Z
+;   0x0129 : vertex3X
+;   0x012A : vertex3Y
+;   0x012B : vertex3Z
+;   0x012C : vertex4X
+;   0x012D : vertex4Y
+;   0x012E : vertex4Z
+;   0x012F : vertex5X
+;   0x0130 : vertex5Y
+;   0x0131 : vertex5Z
+;   0x0132 : vertex6X
+;   0x0133 : vertex6Y
+;   0x0134 : vertex6Z
+;   0x0135 : vertex7X
+;   0x0136 : vertex7Y
+;   0x0137 : vertex7Z
 
-;   0x0129 : vertex0X L
-;   0x012A : vertex0X H
-;   0x012B : vertex0Y L
-;   0x012C : vertex0Y H
-;   0x012D : vertex0Z L
-;   0x012E : vertex0Z H
-;   0x012F : vertex1X L
-;   0x0130 : vertex1X H
-;   0x0131 : vertex1Y L
-;   0x0132 : vertex1Y H
-;   0x0133 : vertex1Z L
-;   0x0134 : vertex1Z H
-;   0x0135 : vertex2X L
-;   0x0136 : vertex2X H
-;   0x0137 : vertex2Y L
-;   0x0138 : vertex2Y H
-;   0x0139 : vertex2Z L
-;   0x013A : vertex2Z H
-;   0x013B : vertex3X L
-;   0x013C : vertex3X H
-;   0x013D : vertex3Y L
-;   0x013E : vertex3Y H
-;   0x013F : vertex3Z L
-;   0x0140 : vertex3Z H
-;   0x0141 : vertex4X L
-;   0x0142 : vertex4X H
-;   0x0143 : vertex4Y L
-;   0x0144 : vertex4Y H
-;   0x0145 : vertex4Z L
-;   0x0146 : vertex4Z H
-;   0x0147 : vertex5X L
-;   0x0148 : vertex5X H
-;   0x0149 : vertex5Y L
-;   0x014A : vertex5Y H
-;   0x014B : vertex5Z L
-;   0x014C : vertex5Z H
-;   0x014D : vertex6X L
-;   0x014E : vertex6X H
-;   0x014F : vertex6Y L
-;   0x0150 : vertex6Y H
-;   0x0151 : vertex6Z L
-;   0x0152 : vertex6Z H
-;   0x0153 : vertex7X L
-;   0x0154 : vertex7X H
-;   0x0155 : vertex7Y L
-;   0x0156 : vertex7Y H
-;   0x0157 : vertex7Z L
-;   0x0158 : vertex7Z H
+;   0x0138 : point0X
+;   0x0139 : point0Y
+;   0x013A : point1X
+;   0x013B : point1Y
+;   0x013C : point2X
+;   0x013D : point2Y
+;   0x013E : point3X
+;   0x013F : point3Y
+;   0x0140 : point4X
+;   0x0141 : point4Y
+;   0x0142 : point5X
+;   0x0143 : point5Y
+;   0x0144 : point6X
+;   0x0145 : point6Y
+;   0x0146 : point7X
+;   0x0147 : point7Y
 
+;   0x0148 : playerX
+;   0x0149 : playerY
+;   0x014A : playerZ
 
-;   0x0159 : point0X L
-;   0x015A : point0X H
-;   0x015B : point0Y L
-;   0x015C : point0Y H
-;   0x015D : point1X L
-;   0x015E : point1X H
-;   0x015F : point1Y L
-;   0x0160 : point1Y H
-;   0x0161 : point2X L
-;   0x0162 : point2X H
-;   0x0163 : point2Y L
-;   0x0164 : point2Y H
-;   0x0165 : point3X L
-;   0x0166 : point3X H
-;   0x0167 : point3Y L
-;   0x0168 : point3Y H
-;   0x0169 : point4X L
-;   0x016A : point4X H
-;   0x016B : point4Y L
-;   0x016C : point4Y H
-;   0x016D : point5X L
-;   0x016E : point5X H
-;   0x016F : point5Y L
-;   0x0170 : point5Y H
-;   0x0171 : point6X L
-;   0x0172 : point6X H
-;   0x0173 : point6Y L
-;   0x0174 : point6Y H
-;   0x0175 : point7X L
-;   0x0176 : point7X H
-;   0x0177 : point7Y L
-;   0x0178 : point7Y H
-
-;   0x0179 : playerX L
-;   0x017A : playerX H
-;   0x017B : playerY L
-;   0x017C : playerY H
-;   0x017D : playerZ L
-;   0x017E : playerZ H
 
 
 ;debug :
@@ -154,42 +101,36 @@
 
     .include "m16adef.inc"
 
+    .def drem16uL=r15       ; Divitions registers
+    .def dres16uL=r13       ;
+    .def dres16uH=r12       ;
+    .def dd16uL	=r13        ;
+    .def dd16uH	=r12        ;
+    .def dv16uL	=r9         ;
+    .def dcnt16u =r10       ;
+
+    .def itt = r7           ; Itterator
+    .def shift = r5         ; Cube shift for each frame
+    .def Rfov = r6          ; fov register
+
+    .def PposX = r8         ; Player position registers
+    .def PposY = r11        ;
+    .def PposZ = r14        ;
+
+	.def oLoopR = r4        ; Delay registers
+	.def iLoopRl = r3       ;
+	.def iLoopRh = r2       ;
 
     .def DataL = r22        ; Pixel color registers
 	.def DataH = r21        ; 
 	.def AddressX = r17     ; Pixel address registers
 	.def AddressY = r18     ;
     .def IsW = r25          ; Input register buffer
+	.def temp2 = r20        ; temporary register
+	.def temp = r19         ;
+    .def temp3 = r24        ;
+    .def temp4 = r16        ;
 
-    .def Rfov = r2          ; fov register
-
-    .def itt = r3           ; Itterator
-
-    .def PposXL = r4         ; Player position registers
-    .def PposXH = r5         ;
-    .def PposYL = r6         ;
-    .def PposYH = r7         ;
-    .def PposZL = r8         ;
-    .def PposZH = r9         ;
-
-
-
-    .def drem16uL=r14       ; Divitions registers
-    .def dres16uL=r13       ;
-    .def dres16uH=r12       ;
-    .def dd16uL	=r13        ;
-    .def dd16uH	=r12        ;
-    .def dv16uL	=r11        ;
-    .def dcnt16u =r10       ;
-
-    .def temp = r16         ; Temp registers
-    .def temp2 = r17        ;
-    .def temp3 = r18        ;
-    .def temp4 = r19        ;
-    .def temp5 = r20        ;
-    .def temp6 = r23        ;
-    .def temp7 = r24        ;
-    .def tempConst = r15    ;
 
 	.equ	oVal 	= 2		        ;Delay
 	.equ	iVal 	= 0xFFFF		;Precision of delay
@@ -199,6 +140,7 @@
 	clr DataH               ;
     clr AddressX            ;
 	clr AddressY            ;
+    clr shift               ;   
     ldi temp, 0xFF          ;set temp to 0xFF
 
     out DDRC, temp			;set the output pin to output
@@ -207,18 +149,12 @@
     ldi temp, 0b00000010    ;
     out DDRA, temp          ;
 
-    ldi temp, DefPposXL     ;set the player position
-    mov PposXL, temp        ;
-    ldi temp, DefPposXH     ;set the player position
-    mov PposXH, temp        ;
-    ldi temp, DefPposYL     ;
-    mov PposYL, temp        ;
-    ldi temp, DefPposYH     ;
-    mov PposYH, temp        ;
-    ldi temp, DefPposZL     ;
-    mov PposZL, temp        ;
-    ldi temp, DefPposZH     ;
-    mov PposZH, temp        ;
+    ldi temp, DefPposX      ;set the player position
+    mov PposX, temp         ;
+    ldi temp, DefPposY      ;
+    mov PposY, temp         ;
+    ldi temp, DefPposZ      ;
+    mov PposZ, temp         ;
 
 	ldi	ZL, LOW(starting)   ;set the Z pointer to the starting point
     ldi	ZH, HIGH(starting)  ;
@@ -317,37 +253,37 @@ GetInput:
     andi temp2, 0b00000100  ;apply a mask to get the third bit
     cpi temp2, 0x00         ;check if the second bit is 0
     breq skipDoZ            ;if it's 0, skip the Z position change
-    dec PposZH               ;decrease the Z position
+    dec PposZ               ;decrease the Z position
 skipDoZ:
     mov temp2, temp         ;store the input in temp2
     andi temp2, 0b00001000  ;apply a mask to get the fourth bit
     cpi temp2, 0x00         ;check if the fourth bit is 0
     breq skipUpZ            ;if it's 0, skip the X position change
-    inc PposZH               ;decrease the X position
+    inc PposZ               ;decrease the X position
 skipUpZ:
     mov temp2, temp         ;store the input in temp2
     andi temp2, 0b01000000  ;apply a mask to get the seventh bit
     cpi temp2, 0x00         ;check if the second bit is 0
     breq skipDoX            ;if it's 0, skip the X position change
-    inc PposXH               ;decrease the X position
+    inc PposX               ;decrease the X position
 skipDoX:
     mov temp2, temp         ;store the input in temp2
     andi temp2, 0b00010000  ;apply a mask to get the eighth bit
     cpi temp2, 0x00         ;check if the fourth bit is 0
     breq skipUpX            ;if it's 0, skip the X position change
-    dec PposXH               ;decrease the X position
+    dec PposX               ;decrease the X position
 skipUpX:
     mov temp2, temp         ;store the input in temp2
     andi temp2, 0b10000000  ;apply a mask to get the second bit
     cpi temp2, 0x00         ;check if the second bit is 0
     breq skipDoY            ;if it's 0, skip the Y position change
-    inc PposYH               ;decrease the Y position
+    inc PposY               ;decrease the Y position
 skipDoY:
     mov temp2, temp         ;store the input in temp2
     andi temp2, 0b00100000  ;apply a mask to get the fifth bit
     cpi temp2, 0x00         ;check if the fourth bit is 0
     breq skipUpY            ;if it's 0, skip the Y position change
-    dec PposYH               ;decrease the Y position
+    dec PposY               ;decrease the Y position
 skipUpY:
     ijmp                    ;return to the Z pointer address
 
@@ -355,17 +291,17 @@ skipUpY:
 starting:
     ldi XL, 0x00            ;Get the X size and position
     ldi XH, 0x01            ;
-    ldi temp, DefXsizeH    ;X size
+    ldi temp, DefXsize    ;X size
     st X+, temp
-    ldi temp, DefXposH     ;X position
+    ldi temp, DefXpos     ;X position
     st X+, temp
-    ldi temp, DefYsizeH    ;Y size
+    ldi temp, DefYsize    ;Y size
     st X+, temp
-    ldi temp, DefYposH     ;Y position
+    ldi temp, DefYpos     ;Y position
     st X+, temp
-    ldi temp, DefZsizeH    ;Z size
+    ldi temp, DefZsize    ;Z size
     st X+, temp
-    ldi temp, DefZposH     ;Z position
+    ldi temp, DefZpos     ;Z position
     st X+, temp
     ldi temp, Deffov    ;fov
     mov Rfov, temp
@@ -381,29 +317,41 @@ starting:
 
 end:
     ;jmp end
-    ldi ZL, LOW(skipclearItt)   ;set the Z pointer to the endGetInput point
-    ldi ZH, HIGH(skipclearItt)  ;
+    ldi ZL, LOW(endGetInput)   ;set the Z pointer to the endGetInput point
+    ldi ZH, HIGH(endGetInput)  ;
     rjmp GetInput              ;get the input from the user
+endGetInput:
+    dec shift           ;decrease the shift
+    ldi temp, -20       
+    cp shift, temp      ;compare the shift to -20
+    brne skipclearItt   ;if it's not -20, jump to the whait loop
+    ldi temp, 20        ;if it's -20, set the shift to 20
+    mov shift, temp     ;
+    
 
 skipclearItt:
     ;jmp starting
-    ldi temp2, oVal      ;set the delay value
+    ldi temp, oVal      ;set the delay value
+	mov	oLoopR, temp    ;set the delay register
 
 oLoop:	
 
-    ldi temp3, LOW(iVal)     ;set the precision of the delay
-    ldi temp4, HIGH(iVal)    ;
+    ldi temp, LOW(iVal)     ;set the precision of the delay
+    mov	iLoopRl, temp       ;set the delay register
+    ldi temp, HIGH(iVal)    ;
+	mov	iLoopRh, temp       ;
 
 iLoopl:	
 
-    dec	temp3             ;decrease the delay register
+    dec	iLoopRl             ;decrease the delay register
     brne iLoopl             ;if it's not 0, jump to the next iteration
-    ldi temp3, LOW(iVal)     ;set the precision of the delay
+    ldi temp, LOW(iVal)     ;set the precision of the delay
+    mov	iLoopRl, temp       ;set the delay register
 iLooph:
 
-    dec	temp4	            ;decrease the delay register
+    dec	iLoopRh	            ;decrease the delay register
 	brne iLoopl	            ;if it's not 0, jump to the next iteration
-	dec	temp2	            ;decrease the delay register
+	dec	oLoopR	            ;decrease the delay register
 	brne oLoop	            ;if it's not 0, jump to the next iteration
 
     rjmp starting           ;jump to the starting point
@@ -469,8 +417,8 @@ start:
 	ijmp                    ;return to the Z pointer address
 
 drawRect:               ;draw a cube
-    ldi XL, LOW(returnA)    ;set the X pointer 
-    ldi XH, HIGH(returnA)
+    ldi XL, 0x10        ;set the X pointer 
+    ldi XH, 0x01
     st X+, ZL           ;store the Z pointer 
     st X, ZH
     ldi DataL, 0x00     ;set the color to black
@@ -486,13 +434,10 @@ retDrawTerrain:
     ; X vertex calculation
 
     ldi XL, 0x00    ;get X size and position
-    ld temp, X+     ;temp2 = X size L
-    ld temp2, X*     ;temp = X size H
-    ld temp3, X+    ;temp3 = X position L
-    ld temp4, X     ;temp4 = X position H
+    ld temp, X+     ;temp2 = X size
+    ld temp2, X     ;temp = X position
     
-    lsr temp2
-    ror temp
+    lsr temp
     add temp2, temp ;temp2 = X size + X position/2
 
     ldi XL, 0x23    ;store the X vertex coordinates
@@ -610,9 +555,9 @@ proj:
     ld temp2, Y+    ;get the vertex Y
     ld temp3, Y+    ;get the vertex Z
 
-    sub temp , PposXH       ;Get the relative position of the vertex to the player
-    sub temp2, PposYH       ; 
-    sub temp3, PposZH       ;
+    sub temp , PposX       ;Get the relative position of the vertex to the player
+    sub temp2, PposY       ; 
+    sub temp3, PposZ       ;
 
     cpi temp2, 0        ;Check if the vertex is behind the player
     breq isZero         ;if it's 0, jump to the isZero function
@@ -1256,46 +1201,35 @@ d16u_3:	sec				;    set carry to be shifted into result
 .dseg                   ;RAM allocation
     .org 0x0100
 
-Xsize:  .byte 2
-Xpos:   .byte 2
-Ysize:  .byte 2
-Ypos:   .byte 2
-Zsize:  .byte 2
-Zpos:   .byte 2
+Xsize:  .byte 1
+Xpos:   .byte 1
+Ysize:  .byte 1
+Ypos:   .byte 1
+Zsize:  .byte 1
+Zpos:   .byte 1
 fov:    .byte 1
 texture:.byte 2
-tempA:  .byte 8
-returnA:.byte 10
-temp2A: .byte 8
-vertexs:.byte 48
-points: .byte 32
-Ppos:   .byte 6
+tempA:  .byte 7
+returnA:.byte 5
+temp2A: .byte 11
+vertexs:.byte 24
+points: .byte 16
+Ppos:   .byte 3
 
 
 .cseg                   ;Cube parameters
 
-.equ DefXsizeL = 0
-.equ DefXsizeH = 10
-.equ DefYsizeL = 0
-.equ DefYsizeH = 10
-.equ DefZsizeL = 0
-.equ DefZsizeH = 10
-
-.equ DefXposL = 0
-.equ DefXposH = 0
-.equ DefYposL = 0
-.equ DefYposH = 20
-.equ DefZposL = 0
-.equ DefZposH = 0
-
+.equ DefXsize = 10
+.equ DefYsize = 10
+.equ DefZsize = 10
+.equ DefXpos = 0
+.equ DefYpos = 20
+.equ DefZpos = 0
 .equ Deffov = 40
 .equ Deftexture = 0xFFFF
 
 ;Player parameters
 
-.equ DefPposXL = 0
-.equ DefPposXH = 0
-.equ DefPposYL = 0
-.equ DefPposYH = 0
-.equ DefPposZL = 0
-.equ DefPposZH = 0
+.equ DefPposX = 0
+.equ DefPposY = 0
+.equ DefPposZ = 0
