@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+        "cctype": "cpp",
+        "cstring": "cpp",
+        "cstdio": "cpp",
+        "cstddef": "cpp",
+        "cstdint": "cpp",
+        "cstdlib": "cpp",
+        "ios": "cpp",
+        "iostream": "cpp",
+        "istream": "cpp",
+        "ostream": "cpp",
+        "streambu": "cpp"
+    }
+}
