@@ -7,8 +7,17 @@
 #include <string.h>
 #include <stdint.h>
 #include <cctype>
+#include <list>
+
+
 
 using namespace std;
+
+struct Dico {
+    uint8_t Reg;
+    char Alias[256];
+}test;
+
 
 // X = R27:R26, Y = R29:R28, Z = R31:R30
 uint8_t registers[32];
@@ -28,6 +37,7 @@ bool flag_I;
 
 
 char * Program = NULL;
+int ProgramSize = 0;
 
 char** Lines = NULL;
 
@@ -48,14 +58,15 @@ long GetProgramSize(const char* filename)
 
     fclose(f);
 
-    return fsize -1;
+    return fsize;
 }
 
 void LoadProgram(const char* filename)
 {
     long fsize = GetProgramSize(filename);
     printf("Program size: %d\n", fsize);
-    Program = (char *)malloc(fsize + 1);
+    ProgramSize = fsize+3;
+    Program = (char *)malloc(ProgramSize);
 
     FILE* f = fopen(filename, "rb");
     if (f == NULL)
@@ -64,7 +75,10 @@ void LoadProgram(const char* filename)
         return;
     }
 
-    fread(Program, fsize, 1, f);
+    fread(Program, 1, fsize, f);
+    Program[fsize] = '\r';
+    Program[fsize+1] = '\n';
+    Program[fsize+2] = '\0';
     printf("Program = %s\n", Program);
     fclose(f);
 }
@@ -1179,7 +1193,7 @@ uint8_t Decode_Regiser(char * Reg){
 
 void Format_Program(){
     // remove comments
-    for (int i = 0; i < sizeof(Program); i++)
+    for (int i = 0; i < ProgramSize; i++)
     {
         if(Program[i] == ';'){
             while(Program[i] != '\n'){
@@ -1189,53 +1203,37 @@ void Format_Program(){
         }
     }
     // remove empty lines
-    for (int i = 0; i < sizeof(Program); i++)
-    {
-        if(Program[i] == '\n' && Program[i+1] == '\n'){
-            Program[i] = ' ';
+    for (int j = 0; j < 512; j++)
+    {   
+        for (int i = 0; i < ProgramSize; i++)
+        {
+            if(Program[i] == '\n' && Program[i+2] == '\n'){
+                Program[i-1] = ' ';
+                Program[i] = ' ';
+            }
         }
     }
     // remove tabs
-    for (int i = 0; i < sizeof(Program); i++)
+    for (int i = 0; i < ProgramSize; i++)
     {
         if(Program[i] == '\t'){
             Program[i] = ' ';
         }
     }
-    // remove spaces at the end of the line
-    for (int i = 0; i < sizeof(Program); i++)
-    {
-        if(Program[i] == '\n' && Program[i-1] == ' '){
-            Program[i-1] = '\n';
-        }
-    }
-    // remove spaces at the start of the line
-    for (int i = 0; i < sizeof(Program); i++)
-    {
-        if(Program[i] == '\n' && Program[i+1] == ' '){
-            Program[i+1] = '\n';
-        }
-    }
-    // remove spaces at the start of the program
-    for (int i = 0; i < sizeof(Program); i++)
-    {
-        if(Program[i] == ' ' && Program[i+1] == '\n'){
-            Program[i] = '\n';
-        }
-    }
+
 
 }
 
 void SetLines(){
     
     int line = 0;
-    lineCount++;
-    for (int i = 0; i < sizeof(Program); i++){
+    for (int i = 0; i < ProgramSize; i++){
         if (Program[i] == '\n') line++;
     }
-    Program[sizeof(Program)] = '\0';
+
+    
     printf("Program = %s\n", Program);
-    Lines = (char ** ) malloc(sizeof(char*) * line+1);
+    Lines = (char ** ) malloc(sizeof(char*) * line);
     printf("Line count = %d\n", line);
     for (int i = 0; i < line; i++){
         while(Program[i] != '\n' && Program[i] != '\0'){
@@ -1420,15 +1418,14 @@ void Decode_Ins(int line){
     else if(strcmp(opcode, "xch") == 0) Ins_XCH(Decode_Regiser(arg1), Decode_Regiser(arg2));
     else printf("Error: Invalid Instruction\n");
 
-    
 }
 
 int main()
 {
     char filename[] = "Main.asm";
     LoadProgram(filename);
-    //Format_Program();
-    printf("Program = %s\n", Program);
+    Format_Program();
+    //printf("Program = %s\n", Program);
     SetLines();
     printf("Line Count: %d\n", lineCount);
     pc = 0;
