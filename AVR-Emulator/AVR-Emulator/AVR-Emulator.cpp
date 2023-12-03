@@ -1235,17 +1235,30 @@ void SetLines(){
     printf("Program = %s\n", Program);
     Lines = (char ** ) malloc(sizeof(char*) * line);
     printf("Line count = %d\n", line);
+    int j = 0;
     for (int i = 0; i < line; i++){
-        while(Program[i] != '\n' && Program[i] != '\0'){
-                Lines[line] = &Program[i];
-                i++;
+        int k = 0;
+        char* CurrLine = (char *) malloc(sizeof(char) * 512);
+        while(Program[j] != '\n' && Program[j] != '\0'){
+                CurrLine[k] = Program[j];
+                //printf("CurrLine[%d] = %c\n", j, CurrLine[k]);
+                k++;
+                j++;
         }
+        CurrLine[k] = '\0';
+        Lines[i] = CurrLine;
         //replace the newline with the null character
-        Program[i] = '\0';
-        printf("Line decoded = \n%s", Lines[line]);
-        line++;
+        j++;
+        
+        //printf("Line decoded = %s\n", Lines[i]);
     }
     lineCount = line;
+    for (int i = 0; i < line; i++)
+    {
+        printf("Line decoded = %s\n", Lines[i]);
+    }
+    
+    
 }
 
 void Decode_Ins(int line){
@@ -1253,16 +1266,16 @@ void Decode_Ins(int line){
 
     
     char* lineStr = Lines[line];
-    
-    printf("Decoding line \"%s\"\n", lineStr);
     printf("Decoding line %d\n", line);
+    printf("line = %s\n", lineStr);
+    
 
     char* opcode = strtok(lineStr, " ");
     
     char* arg1 = strtok(NULL, " ");
     char* arg2 = strtok(NULL, " ");
     char* arg3 = strtok(NULL, " ");
-    printf("Line %d = op :%s, arg1 :%s, arg2 :%s, arg3 :%s\n", line, opcode, arg1, arg2, arg3);
+    printf("Line %d = op :%s, arg1 = %s\n", line, opcode, arg1);
     //cout << line << " " << opcode << " " << arg1 << " " << arg2 << " " << arg3 << endl;
     for (int i = 0; i < sizeof(opcode); i++)
     {
@@ -1271,7 +1284,7 @@ void Decode_Ins(int line){
     for (int i = 0; i < sizeof(arg1); i++)
     {
         arg1[i] = tolower(arg1[i]);
-    }
+    }/*
     for (int i = 0; i < sizeof(arg2); i++)
     {
         arg2[i] = tolower(arg2[i]);
@@ -1279,9 +1292,8 @@ void Decode_Ins(int line){
     for (int i = 0; i < sizeof(arg3); i++)
     {
         arg3[i] = tolower(arg3[i]);
-    }
-
-    printf("Line %d = op :%s, arg1 :%s, arg2 :%s, arg3 :%s\n", line, opcode, arg1, arg2, arg3);
+    }*/
+    printf("Line %d = op :%s, arg1 = %s\n", line, opcode, arg1);
 
     if(strcmp(opcode, "adc") == 0) Ins_ADC(Decode_Regiser(arg1), Decode_Regiser(arg2));
     else if(strcmp(opcode, "add") == 0) Ins_ADD(Decode_Regiser(arg1), Decode_Regiser(arg2));
@@ -1416,7 +1428,7 @@ void Decode_Ins(int line){
     else if(strcmp(opcode, "tst") == 0) Ins_TST(Decode_Regiser(arg1), Decode_Regiser(arg2));
     else if(strcmp(opcode, "wdr") == 0) Ins_WDR();
     else if(strcmp(opcode, "xch") == 0) Ins_XCH(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else printf("Error: Invalid Instruction\n");
+    else printf("Error: Invalid Instruction (PC = %d)\n", line);
 
 }
 
