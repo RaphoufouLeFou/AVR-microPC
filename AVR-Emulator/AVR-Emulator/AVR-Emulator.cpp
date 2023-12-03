@@ -8,6 +8,17 @@
 #include <stdint.h>
 #include <cctype>
 #include <list>
+#include <SDL.h>
+
+
+#define PIXEL_SIZE 5
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+
+#define WIDTH SCREEN_WIDTH*PIXEL_SIZE
+#define HEIGHT SCREEN_HEIGHT*PIXEL_SIZE
 
 
 
@@ -67,7 +78,9 @@ void LoadProgram(const char* filename)
     printf("Program size: %d\n", fsize);
     ProgramSize = fsize+3;
     Program = (char *)malloc(ProgramSize);
-
+    if (Program == NULL) {
+        return;
+    }
     FILE* f = fopen(filename, "rb");
     if (f == NULL)
     {
@@ -93,6 +106,27 @@ void GetLines()
         lineCount++;
     }
 }*/
+
+void OutputPix(SDL_Renderer* renderer, SDL_Texture* buffer) {
+
+    printf("outputing pixel, X = %d, Y = %d, color = 0x%x%x\n", registers[17], registers[18], registers[22], registers[21]);
+    SDL_Rect rect;
+    rect.x = PIXEL_SIZE*registers[17];
+    rect.y = PIXEL_SIZE*registers[18];
+    rect.w = PIXEL_SIZE;
+    rect.h = PIXEL_SIZE;
+    uint16_t color = registers[22] | registers[21]<<8;
+    uint8_t R = color >> 11;
+    uint8_t G = (color >> 5) & 0b111111;
+    uint8_t B = color & 0b11111;
+    R *= 8;
+    G *= 4;
+    B *= 8;
+    SDL_SetRenderDrawColor(renderer, R, G, B, 255);
+    SDL_RenderFillRect(renderer, &rect);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderPresent(renderer);
+}
 
 void Ins_ADC(uint8_t rd, uint8_t rr)
 {
@@ -636,7 +670,7 @@ void Ins_INC(uint8_t rd)
 }
 
 void Ins_JMP(uint32_t k){
-    pc = k;
+    pc = k-2;
 }
 
 void Ins_LAC(uint8_t rd)
@@ -1186,8 +1220,12 @@ void Ins_XCH(uint8_t rd, uint8_t rr)
 }
 
 uint8_t Decode_Regiser(char * Reg){
-    char * NumReg = Reg+1;
-    uint8_t RegNum = atoi(NumReg);
+    if (Reg == NULL) return 0;
+    char * NumReg = &Reg[1];
+    uint8_t RegNum = 0;
+    if (NumReg != NULL) {
+        RegNum = atoi(NumReg);
+    }
     return RegNum;
 }
 
@@ -1232,9 +1270,9 @@ void SetLines(){
     }
 
     
-    printf("Program = %s\n", Program);
+    //printf("Program = %s\n", Program);
     Lines = (char ** ) malloc(sizeof(char*) * line);
-    printf("Line count = %d\n", line);
+    //printf("Line count = %d\n", line);
     int j = 0;
     for (int i = 0; i < line; i++){
         int k = 0;
@@ -1255,13 +1293,13 @@ void SetLines(){
     lineCount = line;
     for (int i = 0; i < line; i++)
     {
-        printf("Line decoded = %s\n", Lines[i]);
+       // printf("Line decoded = %s\n", Lines[i]);
     }
     
     
 }
 
-void Decode_Ins(int line){
+void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
 
 
     
@@ -1281,159 +1319,47 @@ void Decode_Ins(int line){
     {
         opcode[i] = tolower(opcode[i]);
     }
-    for (int i = 0; i < sizeof(arg1); i++)
-    {
-        arg1[i] = tolower(arg1[i]);
-    }/*
-    for (int i = 0; i < sizeof(arg2); i++)
-    {
-        arg2[i] = tolower(arg2[i]);
+    if (arg1 != NULL) {
+        for (int i = 0; i < sizeof(arg1); i++)
+        {
+            arg1[i] = tolower(arg1[i]);
+        }
     }
-    for (int i = 0; i < sizeof(arg3); i++)
-    {
-        arg3[i] = tolower(arg3[i]);
-    }*/
+    if (arg2 != NULL) {
+        for (int i = 0; i < sizeof(arg2); i++)
+        {
+            arg2[i] = tolower(arg2[i]);
+        }
+    }
+    if (arg3 != NULL) {
+        for (int i = 0; i < sizeof(arg3); i++)
+        {
+            arg3[i] = tolower(arg3[i]);
+        }
+    }
     printf("Line %d = op :%s, arg1 = %s\n", line, opcode, arg1);
-
-    if(strcmp(opcode, "adc") == 0) Ins_ADC(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "add") == 0) Ins_ADD(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "adiw") == 0) Ins_ADIW(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "and") == 0) Ins_AND(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "andi") == 0) Ins_ANDI(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "asr") == 0) Ins_ASR(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "bclr") == 0) Ins_BCLR(atoi(arg1));
-    else if(strcmp(opcode, "bld") == 0) Ins_BLD(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "brbc") == 0) Ins_BRBC(atoi(arg1), atoi(arg2));
-    else if(strcmp(opcode, "brbs") == 0) Ins_BRBS(atoi(arg1), atoi(arg2));
-    else if(strcmp(opcode, "brcc") == 0) Ins_BRCC(atoi(arg1));
-    else if(strcmp(opcode, "brcs") == 0) Ins_BRCS(atoi(arg1));
-    else if(strcmp(opcode, "break") == 0) Ins_BREAK();
-    else if(strcmp(opcode, "breq") == 0) Ins_BREQ(atoi(arg1));
-    else if(strcmp(opcode, "brge") == 0) Ins_BRGE(atoi(arg1));
-    else if(strcmp(opcode, "brhc") == 0) Ins_BRHC(atoi(arg1));
-    else if(strcmp(opcode, "brhs") == 0) Ins_BRHS(atoi(arg1));
-    else if(strcmp(opcode, "brid") == 0) Ins_BRID(atoi(arg1));
-    else if(strcmp(opcode, "brie") == 0) Ins_BRIE(atoi(arg1));
-    else if(strcmp(opcode, "brlo") == 0) Ins_BRLO(atoi(arg1));
-    else if(strcmp(opcode, "brlt") == 0) Ins_BRLT(atoi(arg1));
-    else if(strcmp(opcode, "brmi") == 0) Ins_BRMI(atoi(arg1));
-    else if(strcmp(opcode, "brne") == 0) Ins_BRNE(atoi(arg1));
-    else if(strcmp(opcode, "brpl") == 0) Ins_BRPL(atoi(arg1));
-    else if(strcmp(opcode, "brsh") == 0) Ins_BRSH(atoi(arg1));
-    else if(strcmp(opcode, "brtc") == 0) Ins_BRTC(atoi(arg1));
-    else if(strcmp(opcode, "brts") == 0) Ins_BRTS(atoi(arg1));
-    else if(strcmp(opcode, "brvc") == 0) Ins_BRVC(atoi(arg1));
-    else if(strcmp(opcode, "brvs") == 0) Ins_BRVS(atoi(arg1));
-    else if(strcmp(opcode, "bset") == 0) Ins_BSET(atoi(arg1));
-    else if(strcmp(opcode, "bst") == 0) Ins_BST(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "call") == 0) Ins_CALL(atoi(arg1));
-    else if(strcmp(opcode, "cbi") == 0) Ins_CBI(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "cbr") == 0) Ins_CBR(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "clc") == 0) Ins_CLC();
-    else if(strcmp(opcode, "clh") == 0) Ins_CLH();
-    else if(strcmp(opcode, "cli") == 0) Ins_CLI();
-    else if(strcmp(opcode, "cln") == 0) Ins_CLN();
-    else if(strcmp(opcode, "clr") == 0) Ins_CLR(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "cls") == 0) Ins_CLS();
-    else if(strcmp(opcode, "clt") == 0) Ins_CLT();
-    else if(strcmp(opcode, "clv") == 0) Ins_CLV();
-    else if(strcmp(opcode, "clz") == 0) Ins_CLZ();
-    else if(strcmp(opcode, "com") == 0) Ins_COM(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "cp") == 0) Ins_CP(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "cpc") == 0) Ins_CPC(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "cpi") == 0) Ins_CPI(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "cpse") == 0) Ins_CPSE(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "dec") == 0) Ins_DEC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "eicall") == 0) Ins_EICALL();
-    else if(strcmp(opcode, "eijmp") == 0) Ins_EIJMP();
-    else if(strcmp(opcode, "elpm") == 0) Ins_ELPM(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "eor") == 0) Ins_EOR(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "fmul") == 0) Ins_FMUL(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "fmuls") == 0) Ins_FMULS(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "fmulsu") == 0) Ins_FMULSU(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "icall") == 0) Ins_ICALL();
-    else if(strcmp(opcode, "ijmp") == 0) Ins_IJMP();
-    else if(strcmp(opcode, "inc") == 0) Ins_INC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "jmp") == 0) Ins_JMP(atoi(arg1));
-    else if(strcmp(opcode, "lac") == 0) Ins_LAC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "las") == 0) Ins_LAS(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "lat") == 0) Ins_LAT(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ld") == 0) Ins_LD_X(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ldd") == 0) Ins_LD_X(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ldi") == 0) Ins_LDI(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "ldx") == 0) Ins_LD_X(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ldx+") == 0) Ins_LD_X_INC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ldx-") == 0) Ins_LD_X_DEC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ldy") == 0) Ins_LD_Y(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ldy+") == 0) Ins_LD_Y_INC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ldy-") == 0) Ins_LD_Y_DEC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ldz") == 0) Ins_LD_Z(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ldz+") == 0) Ins_LD_Z_INC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ldz-") == 0) Ins_LD_Z_DEC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "lpm") == 0) Ins_LPM(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "lsl") == 0) Ins_LSL(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "lsr") == 0) Ins_LSR(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "mov") == 0) Ins_MOV(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "movw") == 0) Ins_MOVW(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "mul") == 0) Ins_MUL(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "muls") == 0) Ins_MULS(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "mulsu") == 0) Ins_MULSU(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "neg") == 0) Ins_NEG(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "nop") == 0) Ins_NOP();
-    else if(strcmp(opcode, "or") == 0) Ins_OR(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "ori") == 0) Ins_ORI(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "out") == 0) Ins_OUT(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "pop") == 0) Ins_POP(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "push") == 0) Ins_PUSH(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "rcall") == 0) Ins_RCALL(atoi(arg1));
-    else if(strcmp(opcode, "ret") == 0) Ins_RET();
-    else if(strcmp(opcode, "reti") == 0) Ins_RETI();
-    else if(strcmp(opcode, "rjmp") == 0) Ins_RJMP(atoi(arg1));
-    else if(strcmp(opcode, "rol") == 0) Ins_ROL(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ror") == 0) Ins_ROR(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "sbc") == 0) Ins_SBC(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "sbci") == 0) Ins_SBCI(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "sbi") == 0) Ins_SBI(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "sbic") == 0) Ins_SBIC(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "sbis") == 0) Ins_SBIS(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "sbiw") == 0) Ins_SBIW(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "sbr") == 0) Ins_SBR(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "sbrc") == 0) Ins_SBRC(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "sbrs") == 0) Ins_SBRS(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "sec") == 0) Ins_SEC();
-    else if(strcmp(opcode, "seh") == 0) Ins_SEH();
-    else if(strcmp(opcode, "sei") == 0) Ins_SEI();
-    else if(strcmp(opcode, "sen") == 0) Ins_SEN();
-    else if(strcmp(opcode, "ser") == 0) Ins_SER(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "ses") == 0) Ins_SES();
-    else if(strcmp(opcode, "set") == 0) Ins_SET();
-    else if(strcmp(opcode, "sev") == 0) Ins_SEV();
-    else if(strcmp(opcode, "sez") == 0) Ins_SEZ();
-    else if(strcmp(opcode, "sleep") == 0) Ins_SLEEP();
-    else if(strcmp(opcode, "st") == 0) Ins_ST_X(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "std") == 0) Ins_ST_X(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "sts") == 0) Ins_STS(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "stx") == 0) Ins_ST_X(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "stx+") == 0) Ins_ST_X_INC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "stx-") == 0) Ins_ST_X_DEC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "sty") == 0) Ins_ST_Y(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "sty+") == 0) Ins_ST_Y_INC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "sty-") == 0) Ins_ST_Y_DEC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "stz") == 0) Ins_ST_Z(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "stz+") == 0) Ins_ST_Z_INC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "stz-") == 0) Ins_ST_Z_DEC(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "sub") == 0) Ins_SUB(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "subi") == 0) Ins_SUBI(Decode_Regiser(arg1), atoi(arg2));
-    else if(strcmp(opcode, "swap") == 0) Ins_SWAP(Decode_Regiser(arg1));
-    else if(strcmp(opcode, "tst") == 0) Ins_TST(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else if(strcmp(opcode, "wdr") == 0) Ins_WDR();
-    else if(strcmp(opcode, "xch") == 0) Ins_XCH(Decode_Regiser(arg1), Decode_Regiser(arg2));
-    else printf("Error: Invalid Instruction (PC = %d)\n", line);
+    for (int i = 0; opcode[i] != '\0'; i++)
+    {
+        printf("0x%x, ", opcode[i]);
+    }   
+    printf("\n");
+    if (arg1 != NULL) {
+        for (int i = 0; arg1[i] != '\0'; i++)
+        {
+            printf("0x%x, ", arg1[i]);
+        }
+    }
+    printf("\n");
+    if (strcmp(opcode, "rjmp") == 0) OutputPix(renderer, buffer);
+    if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 0);
+    if (strcmp(opcode, "inc") == 0) Ins_INC((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    if (strcmp(opcode, "jmp") == 0) Ins_JMP((arg1 != NULL) ? atoi(arg1) : 0);
 
 }
 
-int main()
-{
+
+int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
+
     char filename[] = "Main.asm";
     LoadProgram(filename);
     Format_Program();
@@ -1444,8 +1370,42 @@ int main()
     while (pc < lineCount)
     {
         printf("PC: %d\n", pc);
-        Decode_Ins(pc);
+        printf("Program = %s\n", Program);
+        SetLines();
+        Decode_Ins(pc, renderer, buffer);
         pc++;
     }
     return 0;
+}
+
+
+int main(int argc, char** args)
+{
+    SDL_Renderer* renderer;
+    SDL_Window* window;
+
+
+
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, 0, &window, &renderer);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+    SDL_Texture* buffer = SDL_CreateTexture(renderer,
+        SDL_PIXELFORMAT_RGB565,
+        SDL_TEXTUREACCESS_STREAMING,
+        WIDTH,
+        HEIGHT);
+    SDL_RenderPresent(renderer);
+    SDL_RenderClear(renderer);
+
+    Start(renderer, buffer);
+    SDL_Event event;
+    while (1) {
+        if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
+            break;
+    }
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return EXIT_SUCCESS;
 }
