@@ -7,11 +7,10 @@
 #include <string.h>
 #include <stdint.h>
 #include <cctype>
-#include <list>
 #include <SDL.h>
 
 
-#define PIXEL_SIZE 5
+#define PIXEL_SIZE 8
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -20,7 +19,7 @@
 #define WIDTH SCREEN_WIDTH*PIXEL_SIZE
 #define HEIGHT SCREEN_HEIGHT*PIXEL_SIZE
 
-
+SDL_Renderer* renderer2;
 
 using namespace std;
 
@@ -28,6 +27,7 @@ struct Dico {
     uint8_t Reg;
     char Alias[256];
 }test;
+
 
 
 // X = R27:R26, Y = R29:R28, Z = R31:R30
@@ -59,7 +59,7 @@ long GetProgramSize(const char* filename)
     FILE* f = fopen(filename, "rb");
     if (f == NULL)
     {
-        printf("Error: Could not open file %s\n", filename);
+        //printf("Error: Could not open file %s\n", filename);
         return 0;
     }
 
@@ -75,7 +75,7 @@ long GetProgramSize(const char* filename)
 void LoadProgram(const char* filename)
 {
     long fsize = GetProgramSize(filename);
-    printf("Program size: %d\n", fsize);
+    //printf("Program size: %d\n", fsize);
     ProgramSize = fsize+3;
     Program = (char *)malloc(ProgramSize);
     if (Program == NULL) {
@@ -84,7 +84,7 @@ void LoadProgram(const char* filename)
     FILE* f = fopen(filename, "rb");
     if (f == NULL)
     {
-        printf("Error: Could not open file %s\n", filename);
+        //printf("Error: Could not open file %s\n", filename);
         return;
     }
 
@@ -92,7 +92,7 @@ void LoadProgram(const char* filename)
     Program[fsize] = '\r';
     Program[fsize+1] = '\n';
     Program[fsize+2] = '\0';
-    printf("Program = %s\n", Program);
+    //printf("Program = %s\n", Program);
     fclose(f);
 }
 /*
@@ -101,7 +101,7 @@ void GetLines()
     char* line = strtok((char*)Program, "\n");
     while (line != NULL)
     {
-        printf("%s\n", line);
+        //printf("%s\n", line);
         line = strtok(NULL, "\n");
         lineCount++;
     }
@@ -109,23 +109,32 @@ void GetLines()
 
 void OutputPix(SDL_Renderer* renderer, SDL_Texture* buffer) {
 
-    printf("outputing pixel, X = %d, Y = %d, color = 0x%x%x\n", registers[17], registers[18], registers[22], registers[21]);
+    //printf("outputing pixel, X = %d, Y = %d, color = 0x%x%x\n", registers[17], registers[18], registers[22], registers[21]);
     SDL_Rect rect;
     rect.x = PIXEL_SIZE*registers[17];
     rect.y = PIXEL_SIZE*registers[18];
     rect.w = PIXEL_SIZE;
     rect.h = PIXEL_SIZE;
     uint16_t color = registers[22] | registers[21]<<8;
-    uint8_t R = color >> 11;
-    uint8_t G = (color >> 5) & 0b111111;
-    uint8_t B = color & 0b11111;
-    R *= 8;
-    G *= 4;
-    B *= 8;
-    SDL_SetRenderDrawColor(renderer, R, G, B, 255);
+    SDL_SetRenderDrawColor(renderer, (color >> 11) * 8, ((color >> 5) & 0b111111)*4, (color & 0b11111)*8, 255);
     SDL_RenderFillRect(renderer, &rect);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderPresent(renderer);
+    //SDL_RenderDrawPoint(renderer, registers[17], registers[18]);
+    
+}
+
+void OutputAll(SDL_Renderer* renderer, SDL_Texture* buffer) {
+
+    SDL_Rect rect;
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = WIDTH;
+    rect.h = HEIGHT;
+    uint16_t color = registers[22] | registers[21] << 8;
+    //SDL_SetRenderDrawColor(renderer, (color >> 11) * 8, ((color >> 5) & 0b111111) * 4, (color & 0b11111) * 8, 255);
+    SDL_SetRenderDrawColor(renderer,255, 0, 0, 255);
+    SDL_RenderFillRect(renderer, &rect);
+    //SDL_RenderDrawPoint(renderer, registers[17], registers[18]);
+
 }
 
 void Ins_ADC(uint8_t rd, uint8_t rr)
@@ -284,6 +293,7 @@ void Ins_BREQ(uint8_t k)
     if (flag_Z)
     {
         pc += k;
+        SDL_RenderPresent(renderer2);
     }
 }
 
@@ -1293,7 +1303,7 @@ void SetLines(){
     lineCount = line;
     for (int i = 0; i < line; i++)
     {
-       // printf("Line decoded = %s\n", Lines[i]);
+       // //printf("Line decoded = %s\n", Lines[i]);
     }
     
     
@@ -1301,11 +1311,11 @@ void SetLines(){
 
 void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
 
-
-    
-    char* lineStr = Lines[line];
-    printf("Decoding line %d\n", line);
-    printf("line = %s\n", lineStr);
+    char* lineStr = NULL;
+    lineStr = (char *)malloc(sizeof(char) * 512);
+    memcpy(lineStr, Lines[line], 512);
+    //printf("Decoding line %d\n", line);
+    //printf("line = %s\n", lineStr);
     
 
     char* opcode = strtok(lineStr, " ");
@@ -1313,7 +1323,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
     char* arg1 = strtok(NULL, " ");
     char* arg2 = strtok(NULL, " ");
     char* arg3 = strtok(NULL, " ");
-    printf("Line %d = op :%s, arg1 = %s\n", line, opcode, arg1);
+    //printf("Line %d = op :%s, arg1 = %s\n", line, opcode, arg1);
     //cout << line << " " << opcode << " " << arg1 << " " << arg2 << " " << arg3 << endl;
     for (int i = 0; i < sizeof(opcode); i++)
     {
@@ -1337,23 +1347,204 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
             arg3[i] = tolower(arg3[i]);
         }
     }
-    printf("Line %d = op :%s, arg1 = %s\n", line, opcode, arg1);
+
+    /*
+    printf("line = %s\n", Lines[line]);
+    if (arg3 == NULL) {
+        if (arg2 == NULL) {
+            if (arg1 == NULL) {
+                printf("Line %d = op :%s\n", line, opcode);
+            }
+            else {
+                printf("Line %d = op :%s, arg1 = %s\n", line, opcode, arg1);
+            }
+        }
+        else {
+            printf("Line %d = op :%s, arg1 = %s, arg2 = %s\n", line, opcode, arg1, arg2);
+        }
+    }
+    else {
+        printf("Line %d = op :%s, arg1 = %s, arg2 = %s, arg3 = %s\n", line, opcode, arg1, arg2, arg3);
+    }
+    
+
     for (int i = 0; opcode[i] != '\0'; i++)
     {
-        printf("0x%x, ", opcode[i]);
+        //printf("0x%x, ", opcode[i]);
     }   
-    printf("\n");
+    //printf("\n");
     if (arg1 != NULL) {
         for (int i = 0; arg1[i] != '\0'; i++)
         {
-            printf("0x%x, ", arg1[i]);
+            printf("0x%x ", arg1[i]);
         }
     }
     printf("\n");
-    if (strcmp(opcode, "rjmp") == 0) OutputPix(renderer, buffer);
-    if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 0);
-    if (strcmp(opcode, "inc") == 0) Ins_INC((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
-    if (strcmp(opcode, "jmp") == 0) Ins_JMP((arg1 != NULL) ? atoi(arg1) : 0);
+
+    if (arg1 != NULL) {
+        for (int i = 0; "outputpix\r"[i] != '\0'; i++)
+        {
+            printf("0x%x ", "outputpix\r"[i]);
+        }
+    }
+    printf("\n%d\n", strcmp(arg1, "outputpix\r"));
+    
+    */
+
+
+    if (arg1 == NULL) {
+        arg1 = (char *)malloc(sizeof(char)*2);
+        memcpy(arg1, "0", 2);
+    }
+    if (arg2 == NULL) {
+        arg2 = (char*)malloc(sizeof(char) * 2);
+        memcpy(arg2, "0", 2);
+    }
+
+    if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputpix\r") == 0) OutputPix(renderer, buffer);
+    if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputall\r") == 0) OutputAll(renderer, buffer);
+    else if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "jmp") == 0) Ins_JMP(atoi(arg1));
+    else if (strcmp(opcode, "adc") == 0) Ins_ADC((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "add") == 0) Ins_ADD((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "adiw") == 0) Ins_ADIW((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "and") == 0) Ins_AND((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "andi") == 0) Ins_ANDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "asr") == 0) Ins_ASR((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "bclr") == 0) Ins_BCLR(atoi(arg1));
+    else if (strcmp(opcode, "bld") == 0) Ins_BLD((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "brbc") == 0) Ins_BRBC(atoi(arg1), atoi(arg2));
+    else if (strcmp(opcode, "brbs") == 0) Ins_BRBS(atoi(arg1), atoi(arg2));
+    else if (strcmp(opcode, "brcc") == 0) Ins_BRCC(atoi(arg1));
+    else if (strcmp(opcode, "brcs") == 0) Ins_BRCS(atoi(arg1));
+    else if (strcmp(opcode, "breq") == 0) Ins_BREQ(atoi(arg1));
+    else if (strcmp(opcode, "brge") == 0) Ins_BRGE(atoi(arg1));
+    else if (strcmp(opcode, "brhc") == 0) Ins_BRHC(atoi(arg1));
+    else if (strcmp(opcode, "brhs") == 0) Ins_BRHS(atoi(arg1));
+    else if (strcmp(opcode, "brid") == 0) Ins_BRID(atoi(arg1));
+    else if (strcmp(opcode, "brie") == 0) Ins_BRIE(atoi(arg1));
+    else if (strcmp(opcode, "brlo") == 0) Ins_BRLO(atoi(arg1));
+    else if (strcmp(opcode, "brlt") == 0) Ins_BRLT(atoi(arg1));
+    else if (strcmp(opcode, "brmi") == 0) Ins_BRMI(atoi(arg1));
+    else if (strcmp(opcode, "brne") == 0) Ins_BRNE(atoi(arg1));
+    else if (strcmp(opcode, "brpl") == 0) Ins_BRPL(atoi(arg1));
+    else if (strcmp(opcode, "brsh") == 0) Ins_BRSH(atoi(arg1));
+    else if (strcmp(opcode, "brtc") == 0) Ins_BRTC(atoi(arg1));
+    else if (strcmp(opcode, "brts") == 0) Ins_BRTS(atoi(arg1));
+    else if (strcmp(opcode, "brvc") == 0) Ins_BRVC(atoi(arg1));
+    else if (strcmp(opcode, "brvs") == 0) Ins_BRVS(atoi(arg1));
+    else if (strcmp(opcode, "bset") == 0) Ins_BSET(atoi(arg1));
+    else if (strcmp(opcode, "bst") == 0) Ins_BST((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "call") == 0) Ins_CALL(atoi(arg1));
+    else if (strcmp(opcode, "cbr") == 0) Ins_CBR((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "clc") == 0) Ins_CLC();
+    else if (strcmp(opcode, "clh") == 0) Ins_CLH();
+    else if (strcmp(opcode, "cli") == 0) Ins_CLI();
+    else if (strcmp(opcode, "cln") == 0) Ins_CLN();
+    else if (strcmp(opcode, "clr") == 0) Ins_CLR((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "cls") == 0) Ins_CLS();
+    else if (strcmp(opcode, "clt") == 0) Ins_CLT();
+    else if (strcmp(opcode, "clv") == 0) Ins_CLV();
+    else if (strcmp(opcode, "clz") == 0) Ins_CLZ();
+    else if (strcmp(opcode, "com") == 0) Ins_COM((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "cp") == 0) Ins_CP((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "cpc") == 0) Ins_CPC((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "cpi") == 0) Ins_CPI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "cpse") == 0) Ins_CPSE((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "dec") == 0) Ins_DEC((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "eicall") == 0) Ins_EICALL();
+    else if (strcmp(opcode, "eijmp") == 0) Ins_EIJMP();
+    else if (strcmp(opcode, "elpm") == 0) Ins_ELPM((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "eor") == 0) Ins_EOR((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "fmul") == 0) Ins_FMUL((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "fmuls") == 0) Ins_FMULS((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "fmulsu") == 0) Ins_FMULSU((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "icall") == 0) Ins_ICALL();
+    else if (strcmp(opcode, "ijmp") == 0) Ins_IJMP();
+    else if (strcmp(opcode, "inc") == 0) Ins_INC((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "lac") == 0) Ins_LAC((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "las") == 0) Ins_LAS((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "lat") == 0) Ins_LAT((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    
+    else if (strcmp(opcode, "ld") == 0) {
+        if (arg1 != NULL && arg2 != NULL) {
+            if (strcmp(arg2, "x") == 0) Ins_LD_X(Decode_Regiser(arg1));
+            if (strcmp(arg2, "x+") == 0) Ins_LD_X_INC(Decode_Regiser(arg1));
+            if (strcmp(arg2, "x-") == 0) Ins_LD_X_DEC(Decode_Regiser(arg1));
+            if (strcmp(arg2, "y") == 0) Ins_LD_Y(Decode_Regiser(arg1));
+            if (strcmp(arg2, "y+") == 0) Ins_LD_Y_INC(Decode_Regiser(arg1));
+            if (strcmp(arg2, "y-") == 0) Ins_LD_Y_DEC(Decode_Regiser(arg1));
+            if (strcmp(arg2, "z") == 0) Ins_LD_Z(Decode_Regiser(arg1));
+            if (strcmp(arg2, "z+") == 0) Ins_LD_Z_INC(Decode_Regiser(arg1));
+            if (strcmp(arg2, "z-") == 0) Ins_LD_Z_DEC(Decode_Regiser(arg1));
+        }
+    }
+    else if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "lpm") == 0) Ins_LPM((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+
+    else if (strcmp(opcode, "lsl") == 0) Ins_LSL((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "lsr") == 0) Ins_LSR((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "mov") == 0) Ins_MOV((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
+    else if (strcmp(opcode, "movw") == 0) Ins_MOVW((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+    else if (strcmp(opcode, "mul") == 0) Ins_MUL((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+    else if (strcmp(opcode, "muls") == 0) Ins_MULS((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+    else if (strcmp(opcode, "mulsu") == 0) Ins_MULSU((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+    else if (strcmp(opcode, "neg") == 0) Ins_NEG((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "nop") == 0) Ins_NOP();
+    else if (strcmp(opcode, "or") == 0) Ins_OR((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+    else if (strcmp(opcode, "ori") == 0) Ins_ORI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
+    else if (strcmp(opcode, "out") == 0) Ins_OUT(atoi(arg1), (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+    else if (strcmp(opcode, "pop") == 0) Ins_POP((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "push") == 0) Ins_PUSH((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "rcall") == 0) Ins_RCALL(atoi(arg1));
+    else if (strcmp(opcode, "ret") == 0) Ins_RET();
+    else if (strcmp(opcode, "reti") == 0) Ins_RETI();
+    else if (strcmp(opcode, "rjmp") == 0) Ins_RJMP(atoi(arg1));
+    else if (strcmp(opcode, "rol") == 0) Ins_ROL((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "ror") == 0) Ins_ROR((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "sbc") == 0) Ins_SBC((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+    else if (strcmp(opcode, "sbci") == 0) Ins_SBCI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
+    else if (strcmp(opcode, "sbi") == 0) Ins_SBI(atoi(arg1), (arg2 != NULL) ? atoi(arg2) : 1);
+    else if (strcmp(opcode, "sbic") == 0) Ins_SBIC(atoi(arg1), (arg2 != NULL) ? atoi(arg2) : 1);
+    else if (strcmp(opcode, "sbis") == 0) Ins_SBIS(atoi(arg1), (arg2 != NULL) ? atoi(arg2) : 1);
+    else if (strcmp(opcode, "sbiw") == 0) Ins_SBIW((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
+    else if (strcmp(opcode, "sbr") == 0) Ins_SBR((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
+    else if (strcmp(opcode, "sbrc") == 0) Ins_SBRC((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
+    else if (strcmp(opcode, "sbrs") == 0) Ins_SBRS((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
+
+
+    else if (strcmp(opcode, "sec") == 0) Ins_SEC();
+    else if (strcmp(opcode, "seh") == 0) Ins_SEH();
+    else if (strcmp(opcode, "sei") == 0) Ins_SEI();
+    else if (strcmp(opcode, "sen") == 0) Ins_SEN();
+    else if (strcmp(opcode, "ser") == 0) Ins_SER((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "ses") == 0) Ins_SES();
+    else if (strcmp(opcode, "set") == 0) Ins_SET();
+    else if (strcmp(opcode, "sev") == 0) Ins_SEV();
+    else if (strcmp(opcode, "sez") == 0) Ins_SEZ();
+    else if (strcmp(opcode, "sleep") == 0) Ins_SLEEP();
+    else if (strcmp(opcode, "st") == 0) {
+        if (arg1 != NULL && arg2 != NULL) {
+            if (strcmp(arg2, "x") == 0) Ins_ST_X(Decode_Regiser(arg1));
+            if (strcmp(arg2, "x+") == 0) Ins_ST_X_INC(Decode_Regiser(arg1));
+            if (strcmp(arg2, "x-") == 0) Ins_ST_X_DEC(Decode_Regiser(arg1));
+            if (strcmp(arg2, "y") == 0) Ins_ST_Y(Decode_Regiser(arg1));
+            if (strcmp(arg2, "y+") == 0) Ins_ST_Y_INC(Decode_Regiser(arg1));
+            if (strcmp(arg2, "y-") == 0) Ins_ST_Y_DEC(Decode_Regiser(arg1));
+            if (strcmp(arg2, "z") == 0) Ins_ST_Z(Decode_Regiser(arg1));
+            if (strcmp(arg2, "z+") == 0) Ins_ST_Z_INC(Decode_Regiser(arg1));
+            if (strcmp(arg2, "z-") == 0) Ins_ST_Z_DEC(Decode_Regiser(arg1));
+        }
+    }
+    else if (strcmp(opcode, "sts") == 0) Ins_STS(atoi(arg1));
+    else if (strcmp(opcode, "sub") == 0) Ins_SUB((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+    else if (strcmp(opcode, "subi") == 0) Ins_SUBI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
+    else if (strcmp(opcode, "swap") == 0) Ins_SWAP((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
+    else if (strcmp(opcode, "tst") == 0) Ins_TST((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+
+    else if (strcmp(opcode, "wdr") == 0) Ins_WDR();
+    else if (strcmp(opcode, "xch") == 0) Ins_XCH((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+    free(lineStr);
 
 }
 
@@ -1365,13 +1556,13 @@ int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
     Format_Program();
     //printf("Program = %s\n", Program);
     SetLines();
-    printf("Line Count: %d\n", lineCount);
+    //printf("Line Count: %d\n", lineCount);
     pc = 0;
     while (pc < lineCount)
     {
-        printf("PC: %d\n", pc);
-        printf("Program = %s\n", Program);
-        SetLines();
+        //printf("PC: %d\n", pc);
+        //printf("Program = %s\n", Program);
+        //SetLines();
         Decode_Ins(pc, renderer, buffer);
         pc++;
     }
@@ -1384,8 +1575,6 @@ int main(int argc, char** args)
     SDL_Renderer* renderer;
     SDL_Window* window;
 
-
-
     SDL_Init(SDL_INIT_VIDEO);
     SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, 0, &window, &renderer);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -1397,7 +1586,7 @@ int main(int argc, char** args)
         HEIGHT);
     SDL_RenderPresent(renderer);
     SDL_RenderClear(renderer);
-
+    renderer2 = renderer;
     Start(renderer, buffer);
     SDL_Event event;
     while (1) {
