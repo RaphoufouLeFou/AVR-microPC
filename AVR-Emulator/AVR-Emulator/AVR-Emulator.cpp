@@ -288,7 +288,7 @@ void Ins_BREAK()
     printf("BREAK\n");
 }
 
-void Ins_BREQ(uint8_t k)
+void Ins_BREQ(int16_t k)
 {
     if (flag_Z)
     {
@@ -297,7 +297,7 @@ void Ins_BREQ(uint8_t k)
     }
 }
 
-void Ins_BRGE(uint8_t k)
+void Ins_BRGE(int16_t k)
 {
     if (flag_S == flag_V)
     {
@@ -305,7 +305,7 @@ void Ins_BRGE(uint8_t k)
     }
 }
 
-void Ins_BRHC(uint8_t k)
+void Ins_BRHC(int16_t k)
 {
     if (!flag_H)
     {
@@ -313,7 +313,7 @@ void Ins_BRHC(uint8_t k)
     }
 }
 
-void Ins_BRHS(uint8_t k)
+void Ins_BRHS(int16_t k)
 {
     if (flag_H)
     {
@@ -321,7 +321,7 @@ void Ins_BRHS(uint8_t k)
     }
 }
 
-void Ins_BRID(uint8_t k)
+void Ins_BRID(int16_t k)
 {
     if (!flag_I)
     {
@@ -329,7 +329,7 @@ void Ins_BRID(uint8_t k)
     }
 }
 
-void Ins_BRIE(uint8_t k)
+void Ins_BRIE(int16_t k)
 {
     if (flag_I)
     {
@@ -337,7 +337,7 @@ void Ins_BRIE(uint8_t k)
     }
 }
 
-void Ins_BRLO(uint8_t k)
+void Ins_BRLO(int16_t k)
 {
     if (!flag_C)
     {
@@ -345,7 +345,7 @@ void Ins_BRLO(uint8_t k)
     }
 }
 
-void Ins_BRLT(uint8_t k)
+void Ins_BRLT(int16_t k)
 {
     if (flag_S != flag_V)
     {
@@ -353,7 +353,7 @@ void Ins_BRLT(uint8_t k)
     }
 }
 
-void Ins_BRMI(uint8_t k)
+void Ins_BRMI(int16_t k)
 {
     if (flag_N)
     {
@@ -361,7 +361,7 @@ void Ins_BRMI(uint8_t k)
     }
 }
 
-void Ins_BRNE(uint8_t k)
+void Ins_BRNE(int16_t k)
 {
     if (!flag_Z)
     {
@@ -369,7 +369,7 @@ void Ins_BRNE(uint8_t k)
     }
 }
 
-void Ins_BRPL(uint8_t k)
+void Ins_BRPL(int16_t k)
 {
     if (!flag_N)
     {
@@ -377,7 +377,7 @@ void Ins_BRPL(uint8_t k)
     }
 }
 
-void Ins_BRSH(uint8_t k)
+void Ins_BRSH(int16_t k)
 {
     if (!flag_C)
     {
@@ -385,7 +385,7 @@ void Ins_BRSH(uint8_t k)
     }
 }
 
-void Ins_BRTC(uint8_t k)
+void Ins_BRTC(int16_t k)
 {
     if (!flag_T)
     {
@@ -393,7 +393,7 @@ void Ins_BRTC(uint8_t k)
     }
 }
 
-void Ins_BRTS(uint8_t k)
+void Ins_BRTS(int16_t k)
 {
     if (flag_T)
     {
@@ -401,7 +401,7 @@ void Ins_BRTS(uint8_t k)
     }
 }
 
-void Ins_BRVC(uint8_t k)
+void Ins_BRVC(int16_t k)
 {
     if (!flag_V)
     {
@@ -409,7 +409,7 @@ void Ins_BRVC(uint8_t k)
     }
 }
 
-void Ins_BRVS(uint8_t k)
+void Ins_BRVS(int16_t k)
 {
     if (flag_V)
     {
@@ -417,7 +417,7 @@ void Ins_BRVS(uint8_t k)
     }
 }
 
-void Ins_BSET(uint8_t s)
+void Ins_BSET(int16_t s)
 {
     switch (s)
     {
@@ -1347,7 +1347,6 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
             arg3[i] = tolower(arg3[i]);
         }
     }
-
     /*
     printf("line = %s\n", Lines[line]);
     if (arg3 == NULL) {
@@ -1387,10 +1386,9 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
             printf("0x%x ", "outputpix\r"[i]);
         }
     }
-    printf("\n%d\n", strcmp(arg1, "outputpix\r"));
-    
+    printf("\n%d\n", atoi(arg1));
     */
-
+ 
 
     if (arg1 == NULL) {
         arg1 = (char *)malloc(sizeof(char)*2);
