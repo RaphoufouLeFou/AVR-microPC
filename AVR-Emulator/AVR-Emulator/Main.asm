@@ -14,4 +14,7 @@ brpl 2
 rjmp outputPix
 jmp 6
 inc r17
+mov r16 r17
+andi r16 1
+mov r18 r16
 jmp 6

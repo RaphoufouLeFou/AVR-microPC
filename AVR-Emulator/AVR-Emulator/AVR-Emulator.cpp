@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <thread>        
 #include <cctype>
 #include <SDL.h>
 
@@ -1366,12 +1367,6 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
         printf("Line %d = op :%s, arg1 = %s, arg2 = %s, arg3 = %s\n", line, opcode, arg1, arg2, arg3);
     }
     
-
-    for (int i = 0; opcode[i] != '\0'; i++)
-    {
-        //printf("0x%x, ", opcode[i]);
-    }   
-    //printf("\n");
     if (arg1 != NULL) {
         for (int i = 0; arg1[i] != '\0'; i++)
         {
@@ -1387,15 +1382,18 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
         }
     }
     printf("\n%d\n", atoi(arg1));
-    */
- 
-
+    
+ */
+    bool HaveArg1 = false;
+    bool HaveArg2 = false;
     if (arg1 == NULL) {
         arg1 = (char *)malloc(sizeof(char)*2);
+        HaveArg1 = true;
         memcpy(arg1, "0", 2);
     }
     if (arg2 == NULL) {
         arg2 = (char*)malloc(sizeof(char) * 2);
+        HaveArg2 = true;
         memcpy(arg2, "0", 2);
     }
 
@@ -1543,9 +1541,17 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
     else if (strcmp(opcode, "wdr") == 0) Ins_WDR();
     else if (strcmp(opcode, "xch") == 0) Ins_XCH((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
     free(lineStr);
+    if(HaveArg1) free(arg1);
+    if(HaveArg2) free(arg2);
 
 }
 
+void updateScreen(SDL_Renderer* renderer) {
+    while (1) {
+        printf("Updating screen\n");
+	    //SDL_RenderPresent(renderer);
+    }
+}
 
 int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
 
@@ -1556,6 +1562,7 @@ int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
     SetLines();
     //printf("Line Count: %d\n", lineCount);
     pc = 0;
+    //std::thread(updateScreen, &*renderer);
     while (pc < lineCount)
     {
         //printf("PC: %d\n", pc);
