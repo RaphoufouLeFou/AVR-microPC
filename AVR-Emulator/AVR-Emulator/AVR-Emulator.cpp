@@ -6,12 +6,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <thread>        
 #include <cctype>
 #include <SDL.h>
+#include <SDL_thread.h>
 
 
-#define PIXEL_SIZE 8
+#define PIXEL_SIZE 10
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -294,7 +294,7 @@ void Ins_BREQ(int16_t k)
     if (flag_Z)
     {
         pc += k;
-        SDL_RenderPresent(renderer2);
+        //SDL_RenderPresent(renderer2);
     }
 }
 
@@ -1546,11 +1546,13 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
 
 }
 
-void updateScreen(SDL_Renderer* renderer) {
+int updateScreen(void* renderer) {
     while (1) {
-        printf("Updating screen\n");
-	    //SDL_RenderPresent(renderer);
+        //printf("Updating screen\n");
+	    SDL_RenderPresent((SDL_Renderer*)renderer);
+        SDL_Delay(16);
     }
+    return 0;
 }
 
 int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
@@ -1562,7 +1564,9 @@ int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
     SetLines();
     //printf("Line Count: %d\n", lineCount);
     pc = 0;
-    //std::thread(updateScreen, &*renderer);
+    SDL_Thread* threadID = SDL_CreateThread(updateScreen, "Screen update", (void*)renderer);
+    //std::thread t1(updateScreen, &*renderer);
+    //t1.join();
     while (pc < lineCount)
     {
         //printf("PC: %d\n", pc);
