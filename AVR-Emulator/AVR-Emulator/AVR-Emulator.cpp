@@ -1,4 +1,4 @@
-// AVR-Emulator.cpp : Ce fichier contient la fonction 'main'. L'ex�cution du programme commence et se termine � cet endroit.
+// AVR-Emulator.cpp : Ce fichier contient la fonction 'main'. L'execution du programme commence et se termine a cet endroit.
 //
 
 #include <iostream>
@@ -93,7 +93,7 @@ void LoadProgram(const char* filename)
     Program[fsize] = '\r';
     Program[fsize+1] = '\n';
     Program[fsize+2] = '\0';
-    //printf("Program = %s\n", Program);
+    printf("Program = %s\n", Program);
     fclose(f);
 }
 /*
@@ -1231,9 +1231,10 @@ void Ins_XCH(uint8_t rd, uint8_t rr)
 }
 
 uint8_t Decode_Regiser(char * Reg){
-    if (Reg == NULL) return 0;
+    if (Reg == NULL) return -1;
+    while (*Reg == ' ') Reg++;
     char * NumReg = &Reg[1];
-    uint8_t RegNum = 0;
+    uint8_t RegNum = -1;
     if (NumReg != NULL) {
         RegNum = atoi(NumReg);
     }
@@ -1270,7 +1271,16 @@ void Format_Program(){
         }
     }
 
+}
 
+void RemoveMacros() {
+    for (int i = 0; i < lineCount; i++)
+    {
+        for (int j = 0; j < sizeof(Lines[i]); j++)
+        {
+
+        }
+    }
 }
 
 void SetLines(){
@@ -1321,9 +1331,16 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
 
     char* opcode = strtok(lineStr, " ");
     
-    char* arg1 = strtok(NULL, " ");
-    char* arg2 = strtok(NULL, " ");
-    char* arg3 = strtok(NULL, " ");
+    bool HaveMultipleArgs = false;
+    for (int i = 0; i < sizeof(lineStr); i++)
+    {
+        if (lineStr[i] == ' ') HaveMultipleArgs = true;
+    }
+    char* arg1 = NULL;
+    if(HaveMultipleArgs) arg1 = strtok(NULL, ",");
+    else  arg1 = strtok(NULL, " ");
+    char* arg2 = strtok(NULL, ",");
+    char* arg3 = strtok(NULL, ",");
     //printf("Line %d = op :%s, arg1 = %s\n", line, opcode, arg1);
     //cout << line << " " << opcode << " " << arg1 << " " << arg2 << " " << arg3 << endl;
     for (int i = 0; i < sizeof(opcode); i++)
@@ -1348,7 +1365,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
             arg3[i] = tolower(arg3[i]);
         }
     }
-    /*
+    
     printf("line = %s\n", Lines[line]);
     if (arg3 == NULL) {
         if (arg2 == NULL) {
@@ -1364,7 +1381,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
         }
     }
     else {
-        printf("Line %d = op :%s, arg1 = %s, arg2 = %s, arg3 = %s\n", line, opcode, arg1, arg2, arg3);
+        printf("Line %d = op :%s arg1 = %s arg2 = %s arg3 = %s\n", line, opcode, arg1, arg2, arg3);
     }
     
     if (arg1 != NULL) {
@@ -1382,8 +1399,8 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
         }
     }
     printf("\n%d\n", atoi(arg1));
-    
- */
+
+ 
     bool HaveArg1 = false;
     bool HaveArg2 = false;
     if (arg1 == NULL) {
@@ -1397,6 +1414,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
         memcpy(arg2, "0", 2);
     }
 
+   
     if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputpix\r") == 0) OutputPix(renderer, buffer);
     if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputall\r") == 0) OutputAll(renderer, buffer);
     else if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
@@ -1560,7 +1578,7 @@ int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
     char filename[] = "Main.asm";
     LoadProgram(filename);
     Format_Program();
-    //printf("Program = %s\n", Program);
+    printf("Program = %s\n", Program);
     SetLines();
     //printf("Line Count: %d\n", lineCount);
     pc = 0;
