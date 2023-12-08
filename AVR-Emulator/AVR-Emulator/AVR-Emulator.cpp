@@ -1271,6 +1271,14 @@ void Format_Program(){
         }
     }
 
+    // remove carrage return
+
+    for (int i = 0; i < ProgramSize; i++)
+    {
+        if (Program[i] == '\r') {
+            Program[i] = ' ';
+        }
+    }
 }
 
 void RemoveMacros() {
@@ -1320,6 +1328,30 @@ void SetLines(){
     
 }
 
+char * FormatArgs(char* arg) {
+    if (arg == NULL) return NULL;
+    while (*arg == ' ') arg++;
+    char* res = arg;
+    arg++;
+    while (*arg != ' ') {
+        if (*arg == '\0') return res;
+        arg++;
+    }
+    *arg = '\0';
+    return res;
+}
+
+uint16_t resolveArgSize(char* arg) {
+    if (arg == NULL) return 0;
+    uint16_t res = 0;
+    char * argCpy = arg;
+    while (*argCpy != '\0') {
+        argCpy++;
+        res++;
+    }
+    return res;
+}
+
 void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
 
     char* lineStr = NULL;
@@ -1343,29 +1375,52 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
     char* arg3 = strtok(NULL, ",");
     //printf("Line %d = op :%s, arg1 = %s\n", line, opcode, arg1);
     //cout << line << " " << opcode << " " << arg1 << " " << arg2 << " " << arg3 << endl;
-    for (int i = 0; i < sizeof(opcode); i++)
+
+
+    bool HaveArg1 = false;
+    bool HaveArg2 = false;
+    if (arg1 == NULL) {
+        arg1 = (char*)malloc(sizeof(char) * 2);
+        HaveArg1 = true;
+        memcpy(arg1, "0", 2);
+    }
+    if (arg2 == NULL) {
+        arg2 = (char*)malloc(sizeof(char) * 2);
+        HaveArg2 = true;
+        memcpy(arg2, "0", 2);
+    }
+
+
+    arg1 = FormatArgs(arg1);
+    arg2 = FormatArgs(arg2);
+    uint16_t opcodeSize = resolveArgSize(opcode);
+    uint16_t arg1Size = resolveArgSize(arg1);
+    uint16_t arg2Size = resolveArgSize(arg2);
+    uint16_t arg3Size = resolveArgSize(arg3);
+
+    for (int i = 0; i < opcodeSize; i++)
     {
         opcode[i] = tolower(opcode[i]);
     }
     if (arg1 != NULL) {
-        for (int i = 0; i < sizeof(arg1); i++)
+        for (int i = 0; i < arg1Size; i++)
         {
             arg1[i] = tolower(arg1[i]);
         }
     }
     if (arg2 != NULL) {
-        for (int i = 0; i < sizeof(arg2); i++)
+        for (int i = 0; i < arg2Size; i++)
         {
             arg2[i] = tolower(arg2[i]);
         }
     }
     if (arg3 != NULL) {
-        for (int i = 0; i < sizeof(arg3); i++)
+        for (int i = 0; i < arg3Size; i++)
         {
             arg3[i] = tolower(arg3[i]);
         }
     }
-    
+
     printf("line = %s\n", Lines[line]);
     if (arg3 == NULL) {
         if (arg2 == NULL) {
@@ -1393,30 +1448,17 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
     printf("\n");
 
     if (arg1 != NULL) {
-        for (int i = 0; "outputpix\r"[i] != '\0'; i++)
+        for (int i = 0; "outputpix"[i] != '\0'; i++)
         {
-            printf("0x%x ", "outputpix\r"[i]);
+            printf("0x%x ", "outputpix"[i]);
         }
     }
     printf("\n%d\n", atoi(arg1));
 
- 
-    bool HaveArg1 = false;
-    bool HaveArg2 = false;
-    if (arg1 == NULL) {
-        arg1 = (char *)malloc(sizeof(char)*2);
-        HaveArg1 = true;
-        memcpy(arg1, "0", 2);
-    }
-    if (arg2 == NULL) {
-        arg2 = (char*)malloc(sizeof(char) * 2);
-        HaveArg2 = true;
-        memcpy(arg2, "0", 2);
-    }
 
    
-    if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputpix\r") == 0) OutputPix(renderer, buffer);
-    if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputall\r") == 0) OutputAll(renderer, buffer);
+    if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputpix") == 0) OutputPix(renderer, buffer);
+    if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputall") == 0) OutputAll(renderer, buffer);
     else if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
     else if (strcmp(opcode, "jmp") == 0) Ins_JMP(atoi(arg1));
     else if (strcmp(opcode, "adc") == 0) Ins_ADC((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
@@ -1558,6 +1600,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
 
     else if (strcmp(opcode, "wdr") == 0) Ins_WDR();
     else if (strcmp(opcode, "xch") == 0) Ins_XCH((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+    else printf("INVALID INSTRUCTION !\n");
     free(lineStr);
     if(HaveArg1) free(arg1);
     if(HaveArg2) free(arg2);
