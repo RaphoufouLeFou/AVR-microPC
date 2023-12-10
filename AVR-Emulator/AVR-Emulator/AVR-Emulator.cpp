@@ -9,6 +9,7 @@
 #include <cctype>
 #include <SDL.h>
 #include <SDL_thread.h>
+#include <list>
 
 
 #define PIXEL_SIZE 10
@@ -24,19 +25,26 @@ SDL_Renderer* renderer2;
 
 using namespace std;
 
-struct Dico {
-    uint8_t Reg;
-    char Alias[256];
-}test;
+struct DicoDef {
+    char* Reg;
+    char* Alias;
+};
+
+struct DicoEqu {
+    int   Val;
+    char* Alias;
+};
 
 
+list<DicoDef> MarcroList;
+list<DicoEqu> EquList;
 
 // X = R27:R26, Y = R29:R28, Z = R31:R30
 uint8_t registers[32];
 uint8_t ram[1024];
 uint16_t pc;
 
-uint8_t * stackPointer;
+uint16_t * stackPointer;
 
 bool flag_C;
 bool flag_Z;
@@ -1252,13 +1260,12 @@ void Format_Program(){
             }
         }
     }
-    // remove empty lines
     for (int j = 0; j < 512; j++)
-    {   
+    {
         for (int i = 0; i < ProgramSize; i++)
         {
-            if(Program[i] == '\n' && Program[i+2] == '\n'){
-                Program[i-1] = ' ';
+            if (Program[i] == '\n' && Program[i + 2] == '\n') {
+                Program[i - 1] = ' ';
                 Program[i] = ' ';
             }
         }
@@ -1266,7 +1273,7 @@ void Format_Program(){
     // remove tabs
     for (int i = 0; i < ProgramSize; i++)
     {
-        if(Program[i] == '\t'){
+        if (Program[i] == '\t') {
             Program[i] = ' ';
         }
     }
@@ -1279,14 +1286,151 @@ void Format_Program(){
             Program[i] = ' ';
         }
     }
+    // remove empty lines
+    /*
+    for (int j = 0; j < 512; j++)
+    {   
+        for (int i = 0; i < ProgramSize; i++)
+        {
+            if(Program[i] == '\n' && Program[i+2] == '\n' && Program[i + 1] == '\r') {
+                if(Program[i-1] == '\r')Program[i - 1] = ' ';
+                Program[i] = ' ';
+            }
+            if (Program[i] == '\n') {
+                int k = 1;
+                bool IsSpaceLine = true;
+                while (Program[i + k] != '\n' && Program[i + k] != '\0') {
+                    if (Program[i + k] != ' ') IsSpaceLine = false;
+                    k++;
+                }
+                if (IsSpaceLine) Program[i] = ' ';
+            }
+            if (Program[i] == '\n' && Program[i + 1] == '\n') Program[i] = ' ';
+        }
+    }*/
+
+}
+
+
+char* FormatArgs(char* arg) {
+    if (arg == NULL) return NULL;
+    while (*arg == ' ') arg++;
+    char* res = arg;
+    arg++;
+    while (*arg != ' ') {
+        if (*arg == '\0') return res;
+        arg++;
+    }
+    *arg = '\0';
+    return res;
+}
+
+
+uint16_t resolveArgSize(char* arg) {
+    if (arg == NULL) return 0;
+    uint16_t res = 0;
+    char* argCpy = arg;
+    while (*argCpy != '\0') {
+        argCpy++;
+        res++;
+    }
+    return res;
+}
+
+int resolveVal(char* val) {
+    int base = 10;
+    for (int i = 0; i < sizeof(val)-1; i++)
+    {
+        if (val[i] == '0') {
+            if (val[i + 1] == 'x' || val[i + 1] == 'X') base = 16;
+            if (val[i + 1] == 'b' || val[i + 1] == 'B') base = 2;
+        }
+    }
+    int res;
+    if(base != 10)
+        res = strtol(val + 2, NULL, base);
+    else 
+        res = strtol(val, NULL, base);
+    return res;
 }
 
 void RemoveMacros() {
     for (int i = 0; i < lineCount; i++)
     {
-        for (int j = 0; j < sizeof(Lines[i]); j++)
-        {
+        char* lineStr = NULL;
+        lineStr = (char*)malloc(sizeof(char) * 512);
+        memcpy(lineStr, Lines[i], 512);
 
+        char* opcode = strtok(lineStr, " ");
+        uint16_t opcodeSize = resolveArgSize(opcode);
+        for (int i = 0; i < opcodeSize; i++)
+        {
+            opcode[i] = tolower(opcode[i]);
+        }
+
+        if (strcmp(opcode, ".def") == 0) {
+            char* arg1 = strtok(NULL, "=");
+            char* arg2 = strtok(NULL, "\n");
+            arg1 = FormatArgs(arg1);
+            arg2 = FormatArgs(arg2);
+            printf("code = \"%s\", name = \"%s\", coress = \"%s\"\n", opcode, arg1, arg2);
+            DicoDef macro;
+            macro.Alias = arg1;
+            macro.Reg = arg2;
+            MarcroList.push_back(macro);
+        }
+        else if (strcmp(opcode, ".equ") == 0) {
+            char* arg1 = strtok(NULL, "=");
+            char* arg2 = strtok(NULL, "\n");
+            arg1 = FormatArgs(arg1);
+            arg2 = FormatArgs(arg2);
+            printf("code = \"%s\", name = \"%s\", coress = \"%s\"\n", opcode, arg1, arg2);
+            DicoEqu macro;
+            macro.Alias = arg1;
+            macro.Val = resolveVal(arg2);
+            EquList.push_back(macro);
+        }
+    }
+
+    char* ptrDef = strstr(Program, ".def");
+    while (ptrDef != NULL)
+    {
+        int j = 0;
+        while (ptrDef[j] != '\n' && ptrDef[j] != '\0') {
+            ptrDef[j] = '\n';
+            j++;
+        }
+        ptrDef = strstr(Program, ".def");
+    }
+
+    for (DicoDef var : MarcroList)
+    {
+        char* ptr = strstr(Program, var.Alias);
+        while (ptr != NULL)
+        {
+            uint16_t size = resolveArgSize(var.Alias);
+            for (int i = 0; i < size; i++)
+            {
+                ptr[i] = var.Reg[i]=='\0'?'\n': var.Reg[i];
+            }
+            ptr = strstr(Program, var.Alias);
+        }
+
+    }
+
+    for (DicoEqu var : EquList)
+    {
+        char* ptr = strstr(Program, var.Alias);
+        while (ptr != NULL)
+        {
+            uint16_t size = resolveArgSize(var.Alias);
+            for (int i = 0; i < size; i++)
+            {
+                ptr[i] = '\n';
+            }
+
+            *ptr = *_itoa(var.Val, NULL, 10);
+            char* ptr = strstr(Program, var.Alias);
         }
     }
 }
@@ -1319,37 +1463,11 @@ void SetLines(){
         
         //printf("Line decoded = %s\n", Lines[i]);
     }
-    lineCount = line;
+    lineCount = line+1;
     for (int i = 0; i < line; i++)
     {
-       // //printf("Line decoded = %s\n", Lines[i]);
+        //printf("Line decoded = %s\n", Lines[i]);
     }
-    
-    
-}
-
-char * FormatArgs(char* arg) {
-    if (arg == NULL) return NULL;
-    while (*arg == ' ') arg++;
-    char* res = arg;
-    arg++;
-    while (*arg != ' ') {
-        if (*arg == '\0') return res;
-        arg++;
-    }
-    *arg = '\0';
-    return res;
-}
-
-uint16_t resolveArgSize(char* arg) {
-    if (arg == NULL) return 0;
-    uint16_t res = 0;
-    char * argCpy = arg;
-    while (*argCpy != '\0') {
-        argCpy++;
-        res++;
-    }
-    return res;
 }
 
 void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
@@ -1420,7 +1538,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
             arg3[i] = tolower(arg3[i]);
         }
     }
-
+    
     printf("line = %s\n", Lines[line]);
     if (arg3 == NULL) {
         if (arg2 == NULL) {
@@ -1453,46 +1571,46 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
             printf("0x%x ", "outputpix"[i]);
         }
     }
-    printf("\n%d\n", atoi(arg1));
+    printf("\n%d\n", resolveVal(arg1));
 
-
+    
    
     if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputpix") == 0) OutputPix(renderer, buffer);
     if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputall") == 0) OutputAll(renderer, buffer);
-    else if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
-    else if (strcmp(opcode, "jmp") == 0) Ins_JMP(atoi(arg1));
+    else if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, resolveVal(arg2));
+    else if (strcmp(opcode, "jmp") == 0) Ins_JMP(resolveVal(arg1));
     else if (strcmp(opcode, "adc") == 0) Ins_ADC((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
     else if (strcmp(opcode, "add") == 0) Ins_ADD((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
-    else if (strcmp(opcode, "adiw") == 0) Ins_ADIW((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "adiw") == 0) Ins_ADIW((arg1 != NULL) ? Decode_Regiser(arg1) : 0, resolveVal(arg2));
     else if (strcmp(opcode, "and") == 0) Ins_AND((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
-    else if (strcmp(opcode, "andi") == 0) Ins_ANDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "andi") == 0) Ins_ANDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, resolveVal(arg2));
     else if (strcmp(opcode, "asr") == 0) Ins_ASR((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
-    else if (strcmp(opcode, "bclr") == 0) Ins_BCLR(atoi(arg1));
-    else if (strcmp(opcode, "bld") == 0) Ins_BLD((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
-    else if (strcmp(opcode, "brbc") == 0) Ins_BRBC(atoi(arg1), atoi(arg2));
-    else if (strcmp(opcode, "brbs") == 0) Ins_BRBS(atoi(arg1), atoi(arg2));
-    else if (strcmp(opcode, "brcc") == 0) Ins_BRCC(atoi(arg1));
-    else if (strcmp(opcode, "brcs") == 0) Ins_BRCS(atoi(arg1));
-    else if (strcmp(opcode, "breq") == 0) Ins_BREQ(atoi(arg1));
-    else if (strcmp(opcode, "brge") == 0) Ins_BRGE(atoi(arg1));
-    else if (strcmp(opcode, "brhc") == 0) Ins_BRHC(atoi(arg1));
-    else if (strcmp(opcode, "brhs") == 0) Ins_BRHS(atoi(arg1));
-    else if (strcmp(opcode, "brid") == 0) Ins_BRID(atoi(arg1));
-    else if (strcmp(opcode, "brie") == 0) Ins_BRIE(atoi(arg1));
-    else if (strcmp(opcode, "brlo") == 0) Ins_BRLO(atoi(arg1));
-    else if (strcmp(opcode, "brlt") == 0) Ins_BRLT(atoi(arg1));
-    else if (strcmp(opcode, "brmi") == 0) Ins_BRMI(atoi(arg1));
-    else if (strcmp(opcode, "brne") == 0) Ins_BRNE(atoi(arg1));
-    else if (strcmp(opcode, "brpl") == 0) Ins_BRPL(atoi(arg1));
-    else if (strcmp(opcode, "brsh") == 0) Ins_BRSH(atoi(arg1));
-    else if (strcmp(opcode, "brtc") == 0) Ins_BRTC(atoi(arg1));
-    else if (strcmp(opcode, "brts") == 0) Ins_BRTS(atoi(arg1));
-    else if (strcmp(opcode, "brvc") == 0) Ins_BRVC(atoi(arg1));
-    else if (strcmp(opcode, "brvs") == 0) Ins_BRVS(atoi(arg1));
-    else if (strcmp(opcode, "bset") == 0) Ins_BSET(atoi(arg1));
-    else if (strcmp(opcode, "bst") == 0) Ins_BST((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
-    else if (strcmp(opcode, "call") == 0) Ins_CALL(atoi(arg1));
-    else if (strcmp(opcode, "cbr") == 0) Ins_CBR((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "bclr") == 0) Ins_BCLR(resolveVal(arg1));
+    else if (strcmp(opcode, "bld") == 0) Ins_BLD((arg1 != NULL) ? Decode_Regiser(arg1) : 0, resolveVal(arg2));
+    else if (strcmp(opcode, "brbc") == 0) Ins_BRBC(resolveVal(arg1), resolveVal(arg2));
+    else if (strcmp(opcode, "brbs") == 0) Ins_BRBS(resolveVal(arg1), resolveVal(arg2));
+    else if (strcmp(opcode, "brcc") == 0) Ins_BRCC(resolveVal(arg1));
+    else if (strcmp(opcode, "brcs") == 0) Ins_BRCS(resolveVal(arg1));
+    else if (strcmp(opcode, "breq") == 0) Ins_BREQ(resolveVal(arg1));
+    else if (strcmp(opcode, "brge") == 0) Ins_BRGE(resolveVal(arg1));
+    else if (strcmp(opcode, "brhc") == 0) Ins_BRHC(resolveVal(arg1));
+    else if (strcmp(opcode, "brhs") == 0) Ins_BRHS(resolveVal(arg1));
+    else if (strcmp(opcode, "brid") == 0) Ins_BRID(resolveVal(arg1));
+    else if (strcmp(opcode, "brie") == 0) Ins_BRIE(resolveVal(arg1));
+    else if (strcmp(opcode, "brlo") == 0) Ins_BRLO(resolveVal(arg1));
+    else if (strcmp(opcode, "brlt") == 0) Ins_BRLT(resolveVal(arg1));
+    else if (strcmp(opcode, "brmi") == 0) Ins_BRMI(resolveVal(arg1));
+    else if (strcmp(opcode, "brne") == 0) Ins_BRNE(resolveVal(arg1));
+    else if (strcmp(opcode, "brpl") == 0) Ins_BRPL(resolveVal(arg1));
+    else if (strcmp(opcode, "brsh") == 0) Ins_BRSH(resolveVal(arg1));
+    else if (strcmp(opcode, "brtc") == 0) Ins_BRTC(resolveVal(arg1));
+    else if (strcmp(opcode, "brts") == 0) Ins_BRTS(resolveVal(arg1));
+    else if (strcmp(opcode, "brvc") == 0) Ins_BRVC(resolveVal(arg1));
+    else if (strcmp(opcode, "brvs") == 0) Ins_BRVS(resolveVal(arg1));
+    else if (strcmp(opcode, "bset") == 0) Ins_BSET(resolveVal(arg1));
+    else if (strcmp(opcode, "bst") == 0) Ins_BST((arg1 != NULL) ? Decode_Regiser(arg1) : 0, resolveVal(arg2));
+    else if (strcmp(opcode, "call") == 0) Ins_CALL(resolveVal(arg1));
+    else if (strcmp(opcode, "cbr") == 0) Ins_CBR((arg1 != NULL) ? Decode_Regiser(arg1) : 0, resolveVal(arg2));
     else if (strcmp(opcode, "clc") == 0) Ins_CLC();
     else if (strcmp(opcode, "clh") == 0) Ins_CLH();
     else if (strcmp(opcode, "cli") == 0) Ins_CLI();
@@ -1505,7 +1623,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
     else if (strcmp(opcode, "com") == 0) Ins_COM((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
     else if (strcmp(opcode, "cp") == 0) Ins_CP((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
     else if (strcmp(opcode, "cpc") == 0) Ins_CPC((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
-    else if (strcmp(opcode, "cpi") == 0) Ins_CPI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "cpi") == 0) Ins_CPI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, resolveVal(arg2));
     else if (strcmp(opcode, "cpse") == 0) Ins_CPSE((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
     else if (strcmp(opcode, "dec") == 0) Ins_DEC((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
     else if (strcmp(opcode, "eicall") == 0) Ins_EICALL();
@@ -1535,7 +1653,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
             if (strcmp(arg2, "z-") == 0) Ins_LD_Z_DEC(Decode_Regiser(arg1));
         }
     }
-    else if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, atoi(arg2));
+    else if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, resolveVal(arg2));
     else if (strcmp(opcode, "lpm") == 0) Ins_LPM((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 0);
 
     else if (strcmp(opcode, "lsl") == 0) Ins_LSL((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
@@ -1548,25 +1666,25 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
     else if (strcmp(opcode, "neg") == 0) Ins_NEG((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
     else if (strcmp(opcode, "nop") == 0) Ins_NOP();
     else if (strcmp(opcode, "or") == 0) Ins_OR((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
-    else if (strcmp(opcode, "ori") == 0) Ins_ORI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
-    else if (strcmp(opcode, "out") == 0) Ins_OUT(atoi(arg1), (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
+    else if (strcmp(opcode, "ori") == 0) Ins_ORI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? resolveVal(arg2) : 1);
+    else if (strcmp(opcode, "out") == 0) Ins_OUT(resolveVal(arg1), (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
     else if (strcmp(opcode, "pop") == 0) Ins_POP((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
     else if (strcmp(opcode, "push") == 0) Ins_PUSH((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
-    else if (strcmp(opcode, "rcall") == 0) Ins_RCALL(atoi(arg1));
+    else if (strcmp(opcode, "rcall") == 0) Ins_RCALL(resolveVal(arg1));
     else if (strcmp(opcode, "ret") == 0) Ins_RET();
     else if (strcmp(opcode, "reti") == 0) Ins_RETI();
-    else if (strcmp(opcode, "rjmp") == 0) Ins_RJMP(atoi(arg1));
+    else if (strcmp(opcode, "rjmp") == 0) Ins_RJMP(resolveVal(arg1));
     else if (strcmp(opcode, "rol") == 0) Ins_ROL((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
     else if (strcmp(opcode, "ror") == 0) Ins_ROR((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
     else if (strcmp(opcode, "sbc") == 0) Ins_SBC((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
-    else if (strcmp(opcode, "sbci") == 0) Ins_SBCI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
-    else if (strcmp(opcode, "sbi") == 0) Ins_SBI(atoi(arg1), (arg2 != NULL) ? atoi(arg2) : 1);
-    else if (strcmp(opcode, "sbic") == 0) Ins_SBIC(atoi(arg1), (arg2 != NULL) ? atoi(arg2) : 1);
-    else if (strcmp(opcode, "sbis") == 0) Ins_SBIS(atoi(arg1), (arg2 != NULL) ? atoi(arg2) : 1);
-    else if (strcmp(opcode, "sbiw") == 0) Ins_SBIW((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
-    else if (strcmp(opcode, "sbr") == 0) Ins_SBR((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
-    else if (strcmp(opcode, "sbrc") == 0) Ins_SBRC((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
-    else if (strcmp(opcode, "sbrs") == 0) Ins_SBRS((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
+    else if (strcmp(opcode, "sbci") == 0) Ins_SBCI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? resolveVal(arg2) : 1);
+    else if (strcmp(opcode, "sbi") == 0) Ins_SBI(resolveVal(arg1), (arg2 != NULL) ? resolveVal(arg2) : 1);
+    else if (strcmp(opcode, "sbic") == 0) Ins_SBIC(resolveVal(arg1), (arg2 != NULL) ? resolveVal(arg2) : 1);
+    else if (strcmp(opcode, "sbis") == 0) Ins_SBIS(resolveVal(arg1), (arg2 != NULL) ? resolveVal(arg2) : 1);
+    else if (strcmp(opcode, "sbiw") == 0) Ins_SBIW((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? resolveVal(arg2) : 1);
+    else if (strcmp(opcode, "sbr") == 0) Ins_SBR((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? resolveVal(arg2) : 1);
+    else if (strcmp(opcode, "sbrc") == 0) Ins_SBRC((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? resolveVal(arg2) : 1);
+    else if (strcmp(opcode, "sbrs") == 0) Ins_SBRS((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? resolveVal(arg2) : 1);
 
 
     else if (strcmp(opcode, "sec") == 0) Ins_SEC();
@@ -1592,9 +1710,9 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
             if (strcmp(arg2, "z-") == 0) Ins_ST_Z_DEC(Decode_Regiser(arg1));
         }
     }
-    else if (strcmp(opcode, "sts") == 0) Ins_STS(atoi(arg1));
+    else if (strcmp(opcode, "sts") == 0) Ins_STS(resolveVal(arg1));
     else if (strcmp(opcode, "sub") == 0) Ins_SUB((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
-    else if (strcmp(opcode, "subi") == 0) Ins_SUBI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? atoi(arg2) : 1);
+    else if (strcmp(opcode, "subi") == 0) Ins_SUBI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? resolveVal(arg2) : 1);
     else if (strcmp(opcode, "swap") == 0) Ins_SWAP((arg1 != NULL) ? Decode_Regiser(arg1) : 0);
     else if (strcmp(opcode, "tst") == 0) Ins_TST((arg1 != NULL) ? Decode_Regiser(arg1) : 0, (arg2 != NULL) ? Decode_Regiser(arg2) : 1);
 
@@ -1623,6 +1741,11 @@ int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
     Format_Program();
     printf("Program = %s\n", Program);
     SetLines();
+    //RemoveMacros();
+    //printf("Program = %s\n", Program);
+    //Format_Program();
+    //printf("Program = %s\n", Program);
+    //SetLines();
     //printf("Line Count: %d\n", lineCount);
     pc = 0;
     SDL_Thread* threadID = SDL_CreateThread(updateScreen, "Screen update", (void*)renderer);

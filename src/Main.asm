@@ -487,7 +487,7 @@ retDrawTerrain:
 
     ldi XL, 0x00    ;get X size and position
     ld temp, X+     ;temp2 = X size L
-    ld temp2, X*     ;temp = X size H
+    ld temp2, X+     ;temp = X size H
     ld temp3, X+    ;temp3 = X position L
     ld temp4, X     ;temp4 = X position H
     

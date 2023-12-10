@@ -18,4 +18,3 @@
     andi    r16,        1
     mov     r18,        r16
     jmp     6
-
