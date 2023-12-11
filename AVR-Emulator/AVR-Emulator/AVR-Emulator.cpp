@@ -1463,7 +1463,7 @@ void SetLines(){
         
         //printf("Line decoded = %s\n", Lines[i]);
     }
-    lineCount = line+1;
+    lineCount = line;
     for (int i = 0; i < line; i++)
     {
         //printf("Line decoded = %s\n", Lines[i]);
@@ -1741,11 +1741,11 @@ int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
     Format_Program();
     printf("Program = %s\n", Program);
     SetLines();
-    //RemoveMacros();
-    //printf("Program = %s\n", Program);
+    RemoveMacros();
+    printf("Program = %s\n", Program);
     //Format_Program();
     //printf("Program = %s\n", Program);
-    //SetLines();
+    SetLines();
     //printf("Line Count: %d\n", lineCount);
     pc = 0;
     SDL_Thread* threadID = SDL_CreateThread(updateScreen, "Screen update", (void*)renderer);

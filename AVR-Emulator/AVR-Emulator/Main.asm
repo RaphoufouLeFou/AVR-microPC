@@ -14,7 +14,9 @@
     rjmp    outputPix           ;blablabla
     jmp     6
     inc     r17
-    mov     r16,        r17     ;blablabla
+    .def LALALALA = r18
+    mov     BIT,        r17     ;blablabla
     andi    r16,        1
-    mov     r18,        r16
+    mov     LALALALA,        r16
     jmp     6
+    .def BIT = r16
