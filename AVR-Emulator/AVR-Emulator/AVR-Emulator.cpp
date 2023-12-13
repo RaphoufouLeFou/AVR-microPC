@@ -1250,49 +1250,62 @@ uint8_t Decode_Regiser(char * Reg){
 }
 
 void Format_Program(){
-    // remove comments
+   
+    int Count = 0;
     for (int i = 0; i < ProgramSize; i++)
-    {
-        if(Program[i] == ';'){
-            while(Program[i] != '\n'){
-                Program[i] = ' ';
-                i++;
+    {   
+        // remove comments
+        if (Program[i] == ';') {
+            int j =0;
+            while (Program[i+j] != '\n') {
+                Program[i+j] = '?';
+                Count++;
+                j++;
             }
         }
-    }
-    for (int j = 0; j < 512; j++)
-    {
-        for (int i = 0; i < ProgramSize; i++)
+
+        // remove empty lines
+        if (Program[i] == '\n' && Program[i + 1 ] == '\n') {
+			Program[i] = '?';
+			Count++;
+		}
+
+
+        
+        // remove tabs and carrage return
+        if (Program[i] == '\t' || Program[i] == '\r')
         {
-            if (Program[i] == '\n' && Program[i + 2] == '\n') {
-                Program[i - 1] = ' ';
-                Program[i] = ' ';
-            }
-        }
-    }
-    // remove tabs
-    for (int i = 0; i < ProgramSize; i++)
-    {
-        if (Program[i] == '\t') {
-            Program[i] = ' ';
+            Program[i] = '?';
+            Count++;
         }
     }
 
-    // remove carrage return
+    char * Program2 = (char*)malloc(sizeof(char) * (ProgramSize - Count));
 
+    int j = 0;
+    for (int i = 0; i < ProgramSize; i++)
+	{
+		if (Program[i] != '?') {
+			Program2[j] = Program[i];
+			j++;
+		}
+	}
+
+    ProgramSize = ProgramSize - Count;
+    Program = Program2;
+    free(Program2);
+    /*Count = 0;
     for (int i = 0; i < ProgramSize; i++)
     {
-        if (Program[i] == '\r') {
-            Program[i] = ' ';
-        }
-    }
+
+    }*/
     // remove empty lines
     /*
     for (int j = 0; j < 512; j++)
     {   
         for (int i = 0; i < ProgramSize; i++)
         {
-            if(Program[i] == '\n' && Program[i+2] == '\n' && Program[i + 1] == '\r') {
+            if(Program[i] == '\n' && Program[i+2] == '\n' && Program[i + 1] == ' ') {
                 if(Program[i-1] == '\r')Program[i - 1] = ' ';
                 Program[i] = ' ';
             }
@@ -1307,8 +1320,8 @@ void Format_Program(){
             }
             if (Program[i] == '\n' && Program[i + 1] == '\n') Program[i] = ' ';
         }
-    }*/
-
+    }
+*/
 }
 
 
@@ -1390,6 +1403,7 @@ void RemoveMacros() {
             macro.Val = resolveVal(arg2);
             EquList.push_back(macro);
         }
+        free(lineStr);
     }
 
     char* ptrDef = strstr(Program, ".def");
@@ -1742,6 +1756,12 @@ int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
     printf("Program = %s\n", Program);
     SetLines();
     RemoveMacros();
+    //printf("Program = %X\n", *Program);
+    int i = 0;
+    while (Program[i] != '\0') {
+		printf("Program[%d] = %X\n", i, Program[i]);
+		i++;
+	}
     printf("Program = %s\n", Program);
     //Format_Program();
     //printf("Program = %s\n", Program);
