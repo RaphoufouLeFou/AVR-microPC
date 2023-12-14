@@ -1270,7 +1270,16 @@ void Format_Program(){
 			Count++;
 		}
 
+        if (Program[i] == ' ' && Program[i + 1] == ' ') {
+            Program[i] = '?';
+            Count++;
+        }
 
+        if (Program[i] == '\n' && Program[i + 1] == ' ' && Program[i + 2] == '\n') {
+            Program[i] = '?';
+            Program[i+1] = '?';
+            Count+=2;
+        }
         
         // remove tabs and carrage return
         if (Program[i] == '\t' || Program[i] == '\r')
@@ -1293,7 +1302,6 @@ void Format_Program(){
 
     ProgramSize = ProgramSize - Count;
     Program = Program2;
-    free(Program2);
     /*Count = 0;
     for (int i = 0; i < ProgramSize; i++)
     {
@@ -1388,8 +1396,14 @@ void RemoveMacros() {
             arg2 = FormatArgs(arg2);
             printf("code = \"%s\", name = \"%s\", coress = \"%s\"\n", opcode, arg1, arg2);
             DicoDef macro;
-            macro.Alias = arg1;
-            macro.Reg = arg2;
+            int size = resolveArgSize(arg1);
+            macro.Alias = (char *)malloc(size);
+            //memcpy(macro.Alias, arg1, size);
+            strcpy(macro.Alias, arg1);
+            size = resolveArgSize(arg2);
+            macro.Reg = (char*)malloc(size);
+            //memcpy(macro.Reg, arg2, size);
+            strcpy(macro.Reg, arg2);
             MarcroList.push_back(macro);
         }
         else if (strcmp(opcode, ".equ") == 0) {
@@ -1411,7 +1425,7 @@ void RemoveMacros() {
     {
         int j = 0;
         while (ptrDef[j] != '\n' && ptrDef[j] != '\0') {
-            ptrDef[j] = '\n';
+            ptrDef[j] = ' ';
             j++;
         }
         ptrDef = strstr(Program, ".def");
@@ -1425,7 +1439,10 @@ void RemoveMacros() {
             uint16_t size = resolveArgSize(var.Alias);
             for (int i = 0; i < size; i++)
             {
-                ptr[i] = var.Reg[i]=='\0'?'\n': var.Reg[i];
+                if(i <= 3)
+                    ptr[i] = var.Reg[i]=='\0'?' ': var.Reg[i];
+                else
+                    ptr[i] = ' ';
             }
             ptr = strstr(Program, var.Alias);
         }
@@ -1752,18 +1769,23 @@ int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
 
     char filename[] = "Main.asm";
     LoadProgram(filename);
+    
+    printf("Program = \n%s\n", Program);
     Format_Program();
-    printf("Program = %s\n", Program);
     SetLines();
+    printf("Program = \n%s\n", Program);
     RemoveMacros();
+    printf("Program = \n%s\n", Program);
+    Format_Program();
     //printf("Program = %X\n", *Program);
     int i = 0;
     while (Program[i] != '\0') {
 		printf("Program[%d] = %X\n", i, Program[i]);
 		i++;
 	}
-    printf("Program = %s\n", Program);
-    //Format_Program();
+    Format_Program();
+    printf("Program = \n%s\n", Program);
+    
     //printf("Program = %s\n", Program);
     SetLines();
     //printf("Line Count: %d\n", lineCount);
