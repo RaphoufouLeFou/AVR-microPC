@@ -35,9 +35,20 @@ struct DicoEqu {
     char* Alias;
 };
 
+struct DicoPoint {
+    int   Line;
+    char* Alias;
+};
+
+typedef struct {
+    SDL_Renderer* renderer;
+    SDL_Texture* buffer;
+} ThreadData;
+
 
 list<DicoDef> MarcroList;
 list<DicoEqu> EquList;
+list<DicoPoint> PointList;
 
 // X = R27:R26, Y = R29:R28, Z = R31:R30
 uint8_t registers[32];
@@ -55,6 +66,7 @@ bool flag_H;
 bool flag_T;
 bool flag_I;
 
+uint32_t *VideoBuffer;
 
 char * Program = NULL;
 int ProgramSize = 0;
@@ -125,8 +137,19 @@ void OutputPix(SDL_Renderer* renderer, SDL_Texture* buffer) {
     rect.w = PIXEL_SIZE;
     rect.h = PIXEL_SIZE;
     uint16_t color = registers[22] | registers[21]<<8;
-    SDL_SetRenderDrawColor(renderer, (color >> 11) * 8, ((color >> 5) & 0b111111)*4, (color & 0b11111)*8, 255);
-    SDL_RenderFillRect(renderer, &rect);
+    uint32_t color32 = (color >> 11) * 8 << 24 | ((color >> 5) & 0b111111) * 4 << 16 | (color & 0b11111) * 8 << 8;
+    //SDL_SetRenderDrawColor(renderer, (color >> 11) * 8, ((color >> 5) & 0b111111)*4, (color & 0b11111)*8, 255);
+    //SDL_RenderFillRect(renderer, &rect);
+    for (int i = rect.y; i < PIXEL_SIZE+ rect.y; i++)
+    {
+        for (int j = rect.x; j < PIXEL_SIZE + rect.x; j++)
+        {
+            VideoBuffer[j + i*WIDTH] = color32;
+        }
+    }
+    //SDL_RenderPresent(renderer);
+    //SDL_UpdateTexture(buffer, NULL, VideoBuffer, WIDTH * sizeof(uint32_t));
+    //SDL_RenderCopy(renderer, buffer, NULL, NULL);
     //SDL_RenderDrawPoint(renderer, registers[17], registers[18]);
     
 }
@@ -140,8 +163,13 @@ void OutputAll(SDL_Renderer* renderer, SDL_Texture* buffer) {
     rect.h = HEIGHT;
     uint16_t color = registers[22] | registers[21] << 8;
     //SDL_SetRenderDrawColor(renderer, (color >> 11) * 8, ((color >> 5) & 0b111111) * 4, (color & 0b11111) * 8, 255);
-    SDL_SetRenderDrawColor(renderer,255, 0, 0, 255);
-    SDL_RenderFillRect(renderer, &rect);
+    memset(VideoBuffer, color, WIDTH * HEIGHT * sizeof(uint32_t));
+
+    //SDL_SetRenderDrawColor(renderer,255, 0, 0, 255);
+    //SDL_RenderPresent(renderer);
+    //SDL_UpdateTexture(buffer, NULL, VideoBuffer, WIDTH * sizeof(uint32_t));
+    //SDL_RenderPresent(renderer);
+    //SDL_RenderCopy(renderer, buffer, NULL, NULL);
     //SDL_RenderDrawPoint(renderer, registers[17], registers[18]);
 
 }
@@ -1252,6 +1280,7 @@ uint8_t Decode_Regiser(char * Reg){
 void Format_Program(){
    
     int Count = 0;
+    if(Program[0] == '\n') Program[0] = '?';
     for (int i = 0; i < ProgramSize; i++)
     {   
         // remove comments
@@ -1265,12 +1294,17 @@ void Format_Program(){
         }
 
         // remove empty lines
-        if (Program[i] == '\n' && Program[i + 1 ] == '\n') {
-			Program[i] = '?';
-			Count++;
-		}
+        if (Program[i] == '\n' && Program[i + 1] == '\n') {
+            Program[i] = '?';
+            Count++;
+        }
 
-        if (Program[i] == ' ' && Program[i + 1] == ' ') {
+        if (Program[i] == ' ' && (Program[i + 1] == '\n' || Program[i+1] == ' ')) {
+            Program[i] = '?';
+            Count++;
+        }
+
+        if (Program[i] == ' ' && Program[i + 1] == ',') {
             Program[i] = '?';
             Count++;
         }
@@ -1282,7 +1316,11 @@ void Format_Program(){
         }
         
         // remove tabs and carrage return
-        if (Program[i] == '\t' || Program[i] == '\r')
+        if (Program[i] == '\t')
+        {
+            Program[i] = ' ';
+        }
+        if (Program[i] == '\r')
         {
             Program[i] = '?';
             Count++;
@@ -1360,19 +1398,67 @@ uint16_t resolveArgSize(char* arg) {
 
 int resolveVal(char* val) {
     int base = 10;
-    for (int i = 0; i < sizeof(val)-1; i++)
-    {
-        if (val[i] == '0') {
-            if (val[i + 1] == 'x' || val[i + 1] == 'X') base = 16;
-            if (val[i + 1] == 'b' || val[i + 1] == 'B') base = 2;
+    int size = 0;
+    if(val == NULL) return 0;
+    if (strstr(val, "HIGH")) size = 1;
+    if (strstr(val, "LOW")) size = 2;
+
+    if (size == 0) {
+        for (int i = 0; i < sizeof(val) - 1; i++)
+        {
+            if (val[i] == '0') {
+                if (val[i + 1] == 'x' || val[i + 1] == 'X') base = 16;
+                if (val[i + 1] == 'b' || val[i + 1] == 'B') base = 2;
+            }
         }
+        int res;
+        if (base != 10)
+            res = strtol(val + 2, NULL, base);
+        else
+            res = strtol(val, NULL, base);
+        return res;
     }
-    int res;
-    if(base != 10)
-        res = strtol(val + 2, NULL, base);
-    else 
-        res = strtol(val, NULL, base);
-    return res;
+    if (size == 1) {
+        val += 4;
+        while (strchr(val, '(') != NULL) val++;
+        char* ptr = strchr(val, ')');
+        *ptr = '\0';
+
+        for (int i = 0; i < sizeof(val) - 1; i++)
+        {
+            if (val[i] == '0') {
+                if (val[i + 1] == 'x' || val[i + 1] == 'X') base = 16;
+                if (val[i + 1] == 'b' || val[i + 1] == 'B') base = 2;
+            }
+        }
+        int res;
+        if (base != 10)
+            res = strtol(val + 2, NULL, base);
+        else
+            res = strtol(val, NULL, base);
+        return res >> 8;
+    }
+    if (size == 2) {
+        val += 3;
+        while (strchr(val, '(') != NULL) val++;
+        char* ptr = strchr(val, ')');
+        *ptr = '\0';
+
+        for (int i = 0; i < sizeof(val) - 1; i++)
+        {
+            if (val[i] == '0') {
+                if (val[i + 1] == 'x' || val[i + 1] == 'X') base = 16;
+                if (val[i + 1] == 'b' || val[i + 1] == 'B') base = 2;
+            }
+        }
+        int res;
+        if (base != 10)
+            res = strtol(val + 2, NULL, base);
+        else
+            res = strtol(val, NULL, base);
+        return (res >> 8) << 8;
+    }
+    
 }
 
 void RemoveMacros() {
@@ -1389,6 +1475,7 @@ void RemoveMacros() {
             opcode[i] = tolower(opcode[i]);
         }
 
+
         if (strcmp(opcode, ".def") == 0) {
             char* arg1 = strtok(NULL, "=");
             char* arg2 = strtok(NULL, "\n");
@@ -1402,7 +1489,6 @@ void RemoveMacros() {
             strcpy(macro.Alias, arg1);
             size = resolveArgSize(arg2);
             macro.Reg = (char*)malloc(size);
-            //memcpy(macro.Reg, arg2, size);
             strcpy(macro.Reg, arg2);
             MarcroList.push_back(macro);
         }
@@ -1413,7 +1499,9 @@ void RemoveMacros() {
             arg2 = FormatArgs(arg2);
             printf("code = \"%s\", name = \"%s\", coress = \"%s\"\n", opcode, arg1, arg2);
             DicoEqu macro;
-            macro.Alias = arg1;
+            int size = resolveArgSize(arg1);
+            macro.Alias = (char*)malloc(size);
+            strcpy(macro.Alias, arg1);
             macro.Val = resolveVal(arg2);
             EquList.push_back(macro);
         }
@@ -1429,6 +1517,17 @@ void RemoveMacros() {
             j++;
         }
         ptrDef = strstr(Program, ".def");
+    }
+
+    ptrDef = strstr(Program, ".equ");
+    while (ptrDef != NULL)
+    {
+        int j = 0;
+        while (ptrDef[j] != '\n' && ptrDef[j] != '\0') {
+            ptrDef[j] = ' ';
+            j++;
+        }
+        ptrDef = strstr(Program, ".equ");
     }
 
     for (DicoDef var : MarcroList)
@@ -1462,6 +1561,53 @@ void RemoveMacros() {
 
             *ptr = *_itoa(var.Val, NULL, 10);
             char* ptr = strstr(Program, var.Alias);
+        }
+    }
+}
+
+void ResolvePoints() {
+    for (int i = 0; i < lineCount; i++)
+    {
+        char* lineStr = NULL;
+        lineStr = (char*)malloc(sizeof(char) * 512);
+        memcpy(lineStr, Lines[i], 512);
+
+        char* opcode = strtok(lineStr, " ");
+        uint16_t opcodeSize = resolveArgSize(opcode);
+
+
+        if (opcode[opcodeSize - 1] == ':') {
+            opcode[opcodeSize - 1] = '\0';
+            DicoPoint point;
+            point.Alias = (char*)malloc(sizeof(char) * opcodeSize);
+            strcpy(point.Alias, opcode);
+            point.Line = i+1;
+            PointList.push_back(point);
+            char *Progptr = strstr(Program, opcode);
+
+            for (int j = 0; j < opcodeSize; j++)
+            {
+                Progptr[j] = ' ';
+			}
+        }
+    }
+
+
+    for (DicoPoint var : PointList)
+    {
+
+        char* ptr = strstr(Program, var.Alias);
+        while (ptr != NULL)
+        {
+            uint16_t size = resolveArgSize(var.Alias);
+            char* lineNb = (char*)malloc(sizeof(char) * size);
+            _itoa(var.Line, lineNb, 10);
+            for (int i = 0; i < size; i++)
+            {
+                ptr[i]=lineNb[i]>='0'&&lineNb[i]<='9'?lineNb[i]:' ';
+            }
+            free(lineNb);
+            ptr = strstr(Program, var.Alias);
         }
     }
 }
@@ -1569,7 +1715,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
             arg3[i] = tolower(arg3[i]);
         }
     }
-    
+    /*
     printf("line = %s\n", Lines[line]);
     if (arg3 == NULL) {
         if (arg2 == NULL) {
@@ -1604,8 +1750,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
     }
     printf("\n%d\n", resolveVal(arg1));
 
-    
-   
+ */  
     if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputpix") == 0) OutputPix(renderer, buffer);
     if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputall") == 0) OutputAll(renderer, buffer);
     else if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, resolveVal(arg2));
@@ -1756,11 +1901,14 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
 
 }
 
-int updateScreen(void* renderer) {
+int updateScreen(void* data) {
     while (1) {
         //printf("Updating screen\n");
-	    SDL_RenderPresent((SDL_Renderer*)renderer);
-        SDL_Delay(16);
+        ThreadData* tdata = (ThreadData*)data;
+        SDL_UpdateTexture(tdata->buffer, NULL, VideoBuffer, WIDTH * sizeof(uint32_t));
+	    SDL_RenderPresent(tdata->renderer);
+        SDL_RenderCopy(tdata->renderer, tdata->buffer, NULL, NULL);
+        SDL_Delay(10);
     }
     return 0;
 }
@@ -1769,28 +1917,41 @@ int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
 
     char filename[] = "Main.asm";
     LoadProgram(filename);
-    
+    VideoBuffer = (uint32_t*)malloc(sizeof(uint32_t) * WIDTH * HEIGHT);
     printf("Program = \n%s\n", Program);
     Format_Program();
+    Format_Program();
     SetLines();
+    int i = 0;
+    while (Program[i] != '\0') {
+        printf("Program[%d] = %X\n", i, Program[i]);
+        i++;
+    }
     printf("Program = \n%s\n", Program);
     RemoveMacros();
     printf("Program = \n%s\n", Program);
     Format_Program();
     //printf("Program = %X\n", *Program);
-    int i = 0;
-    while (Program[i] != '\0') {
-		printf("Program[%d] = %X\n", i, Program[i]);
-		i++;
-	}
+
     Format_Program();
     printf("Program = \n%s\n", Program);
-    
+    ResolvePoints();
+    Format_Program();
+    Format_Program();
+    i = 0;
+    while (Program[i] != '\0') {
+        printf("Program[%d] = %X\n", i, Program[i]);
+        i++;
+    }
+    printf("Program = \n%s\n", Program);
     //printf("Program = %s\n", Program);
     SetLines();
     //printf("Line Count: %d\n", lineCount);
     pc = 0;
-    SDL_Thread* threadID = SDL_CreateThread(updateScreen, "Screen update", (void*)renderer);
+    ThreadData* data = (ThreadData*)malloc(sizeof(ThreadData));
+    data->renderer = renderer;
+    data->buffer=buffer;
+    SDL_Thread* threadID = SDL_CreateThread(updateScreen, "Screen update", (void*)data);
     //std::thread t1(updateScreen, &*renderer);
     //t1.join();
     while (pc < lineCount)
@@ -1815,13 +1976,12 @@ int main(int argc, char** args)
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     SDL_Texture* buffer = SDL_CreateTexture(renderer,
-        SDL_PIXELFORMAT_RGB565,
+        SDL_PIXELFORMAT_RGBA8888,
         SDL_TEXTUREACCESS_STREAMING,
         WIDTH,
         HEIGHT);
     SDL_RenderPresent(renderer);
     SDL_RenderClear(renderer);
-    renderer2 = renderer;
     Start(renderer, buffer);
     SDL_Event event;
     while (1) {
