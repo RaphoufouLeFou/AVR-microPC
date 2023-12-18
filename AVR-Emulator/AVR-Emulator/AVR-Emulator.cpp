@@ -161,9 +161,15 @@ void OutputAll(SDL_Renderer* renderer, SDL_Texture* buffer) {
     rect.y = 0;
     rect.w = WIDTH;
     rect.h = HEIGHT;
-    uint16_t color = registers[22] | registers[21] << 8;
+    uint32_t color = registers[22] | registers[21] << 8;
     //SDL_SetRenderDrawColor(renderer, (color >> 11) * 8, ((color >> 5) & 0b111111) * 4, (color & 0b11111) * 8, 255);
-    memset(VideoBuffer, color, WIDTH * HEIGHT * sizeof(uint32_t));
+    //memset(VideoBuffer, color, WIDTH * HEIGHT * sizeof(uint32_t));
+
+    color = ((color >> 11) * 8) << 24 | (((color >> 5) & 0b111111) * 4) << 16 | ((color & 0b11111) * 8) << 8;
+    for (int i = 0; i < WIDTH * HEIGHT; i++)
+    {
+        VideoBuffer[i] = color;
+    }
 
     //SDL_SetRenderDrawColor(renderer,255, 0, 0, 255);
     //SDL_RenderPresent(renderer);
@@ -1400,8 +1406,8 @@ int resolveVal(char* val) {
     int base = 10;
     int size = 0;
     if(val == NULL) return 0;
-    if (strstr(val, "HIGH")) size = 1;
-    if (strstr(val, "LOW")) size = 2;
+    if (strstr(val, "high")) size = 1;
+    if (strstr(val, "low")) size = 2;
 
     if (size == 0) {
         for (int i = 0; i < sizeof(val) - 1; i++)
@@ -1436,7 +1442,8 @@ int resolveVal(char* val) {
             res = strtol(val + 2, NULL, base);
         else
             res = strtol(val, NULL, base);
-        return res >> 8;
+        res = res >> 8;
+        return res;
     }
     if (size == 2) {
         val += 3;
@@ -1456,7 +1463,8 @@ int resolveVal(char* val) {
             res = strtol(val + 2, NULL, base);
         else
             res = strtol(val, NULL, base);
-        return (res >> 8) << 8;
+        res = res & 0xFF;
+        return res;
     }
     
 }
