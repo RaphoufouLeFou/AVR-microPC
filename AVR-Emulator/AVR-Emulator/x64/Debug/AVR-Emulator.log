@@ -28,7 +28,7 @@ C:\Users\rapha\OneDrive\Documents\GitHub\AVR-microPC\AVR-Emulator\AVR-Emulator\A
 C:\Users\rapha\OneDrive\Documents\GitHub\AVR-microPC\AVR-Emulator\AVR-Emulator\AVR-Emulator.cpp(1201,43): warning C4554: '<<' : vérifiez si la priorité des opérateurs n'est pas une cause possible d'erreur ; utilisez des parenthèses pour rendre les priorités plus claires
 C:\Users\rapha\OneDrive\Documents\GitHub\AVR-microPC\AVR-Emulator\AVR-Emulator\AVR-Emulator.cpp(1207,43): warning C4554: '<<' : vérifiez si la priorité des opérateurs n'est pas une cause possible d'erreur ; utilisez des parenthèses pour rendre les priorités plus claires
 C:\Users\rapha\OneDrive\Documents\GitHub\AVR-microPC\AVR-Emulator\AVR-Emulator\AVR-Emulator.cpp(1214,43): warning C4554: '<<' : vérifiez si la priorité des opérateurs n'est pas une cause possible d'erreur ; utilisez des parenthèses pour rendre les priorités plus claires
-C:\Users\rapha\OneDrive\Documents\GitHub\AVR-microPC\AVR-Emulator\AVR-Emulator\AVR-Emulator.cpp(1616,32): warning C4267: '=' : conversion de 'size_t' en 'int', perte possible de données
-C:\Users\rapha\OneDrive\Documents\GitHub\AVR-microPC\AVR-Emulator\AVR-Emulator\AVR-Emulator.cpp(1617,47): warning C4267: '=' : conversion de 'size_t' en 'int', perte possible de données
+C:\Users\rapha\OneDrive\Documents\GitHub\AVR-microPC\AVR-Emulator\AVR-Emulator\AVR-Emulator.cpp(1617,32): warning C4267: '=' : conversion de 'size_t' en 'int', perte possible de données
+C:\Users\rapha\OneDrive\Documents\GitHub\AVR-microPC\AVR-Emulator\AVR-Emulator\AVR-Emulator.cpp(1618,47): warning C4267: '=' : conversion de 'size_t' en 'int', perte possible de données
 C:\Users\rapha\OneDrive\Documents\GitHub\AVR-microPC\AVR-Emulator\AVR-Emulator\AVR-Emulator.cpp(1471): warning C4715: 'resolveVal' : les chemins de contrôle ne retournent pas tous une valeur
   AVR-Emulator.vcxproj -> C:\Users\rapha\OneDrive\Documents\GitHub\AVR-microPC\AVR-Emulator\x64\Debug\AVR-Emulator.exe

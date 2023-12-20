@@ -1591,7 +1591,8 @@ int resolveLine(char* ptr) {
     for (int i = 0; i < ProgramSize; i++)
     {
 		if (Program[i] == '\n') line++;
-		if (&Program[i] == ptr) return line;
+		if (&Program[i] == ptr) 
+            return line+1;
 	}
 	return -1;
 }
@@ -1625,6 +1626,8 @@ void ResolvePoints() {
         free(lineStr);
     }
 
+    Format_Program();
+    Format_Program();
 
     for (DicoPoint var : PointList)
     {
@@ -1649,11 +1652,12 @@ void ResolvePoints() {
             if (strcmp(opcode, "call") == 0) IsRelatve = false;
             if (strcmp(opcode, "ldi") == 0) IsRelatve = false;
             free(Line);
-            int val = var.Line - var.lineDiff;
+            int val = var.Line - 1;
 
             if (IsRelatve) {
-                int CurrLine = resolveLine(ptr) - var.lineDiff -1;
+                int CurrLine = resolveLine(ptr);
                 val = var.Line - CurrLine;
+                if(val > 0) val--;
             }
 
             size = resolveArgSize(var.Alias);
