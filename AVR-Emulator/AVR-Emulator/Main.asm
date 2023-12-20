@@ -10,11 +10,12 @@ loop:
     mov     r16,        r18
     andi    r16,        1
     cpi     r16,        1       ;blablabla
-    breq    -5                  ;blablabla
+    breq    loop                  ;blablabla
     cpi     r18,        64
-    brpl    2
+    brpl    skip
     rjmp    outputPix           ;blablabla
     jmp     loop
+skip:
     inc     r17
     .def LALALALA = r18
     mov     BIT,        r17     ;blablabla

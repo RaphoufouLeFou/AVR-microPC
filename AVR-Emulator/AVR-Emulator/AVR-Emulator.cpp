@@ -1,6 +1,3 @@
-// AVR-Emulator.cpp : Ce fichier contient la fonction 'main'. L'execution du programme commence et se termine a cet endroit.
-//
-
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,6 +35,7 @@ struct DicoEqu {
 struct DicoPoint {
     int   Line;
     char* Alias;
+    int lineDiff;
 };
 
 typedef struct {
@@ -74,6 +72,8 @@ int ProgramSize = 0;
 char** Lines = NULL;
 
 int lineCount = 0;
+
+int currentLine = 0;
 
 long GetProgramSize(const char* filename)
 {
@@ -140,7 +140,7 @@ void OutputPix(SDL_Renderer* renderer, SDL_Texture* buffer) {
     uint32_t color32 = (color >> 11) * 8 << 24 | ((color >> 5) & 0b111111) * 4 << 16 | (color & 0b11111) * 8 << 8;
     //SDL_SetRenderDrawColor(renderer, (color >> 11) * 8, ((color >> 5) & 0b111111)*4, (color & 0b11111)*8, 255);
     //SDL_RenderFillRect(renderer, &rect);
-    for (int i = rect.y; i < PIXEL_SIZE+ rect.y; i++)
+    for (int i = rect.y; i < PIXEL_SIZE + rect.y; i++)
     {
         for (int j = rect.x; j < PIXEL_SIZE + rect.x; j++)
         {
@@ -1345,6 +1345,7 @@ void Format_Program(){
 	}
 
     ProgramSize = ProgramSize - Count;
+    free(Program);
     Program = Program2;
     /*Count = 0;
     for (int i = 0; i < ProgramSize; i++)
@@ -1395,7 +1396,7 @@ uint16_t resolveArgSize(char* arg) {
     if (arg == NULL) return 0;
     uint16_t res = 0;
     char* argCpy = arg;
-    while (*argCpy != '\0') {
+    while (*argCpy != '\0' && *argCpy != '\n') {
         argCpy++;
         res++;
     }
@@ -1538,6 +1539,17 @@ void RemoveMacros() {
         ptrDef = strstr(Program, ".equ");
     }
 
+    ptrDef = strstr(Program, ".include");
+    while (ptrDef != NULL)
+    {
+        int j = 0;
+        while (ptrDef[j] != '\n' && ptrDef[j] != '\0') {
+            ptrDef[j] = ' ';
+            j++;
+        }
+        ptrDef = strstr(Program, ".include");
+    }
+
     for (DicoDef var : MarcroList)
     {
         char* ptr = strstr(Program, var.Alias);
@@ -1570,7 +1582,18 @@ void RemoveMacros() {
             *ptr = *_itoa(var.Val, NULL, 10);
             char* ptr = strstr(Program, var.Alias);
         }
+        free(var.Alias);
     }
+}
+
+int resolveLine(char* ptr) {
+	int line = 0;
+    for (int i = 0; i < ProgramSize; i++)
+    {
+		if (Program[i] == '\n') line++;
+		if (&Program[i] == ptr) return line;
+	}
+	return -1;
 }
 
 void ResolvePoints() {
@@ -1585,19 +1608,21 @@ void ResolvePoints() {
 
 
         if (opcode[opcodeSize - 1] == ':') {
+            char* Progptr = strstr(Program, opcode);
             opcode[opcodeSize - 1] = '\0';
             DicoPoint point;
             point.Alias = (char*)malloc(sizeof(char) * opcodeSize);
             strcpy(point.Alias, opcode);
-            point.Line = i+1;
+            point.Line = i + 1 - PointList.size();
+            point.lineDiff = PointList.size() + 1;
             PointList.push_back(point);
-            char *Progptr = strstr(Program, opcode);
-
             for (int j = 0; j < opcodeSize; j++)
             {
                 Progptr[j] = ' ';
 			}
         }
+
+        free(lineStr);
     }
 
 
@@ -1607,16 +1632,41 @@ void ResolvePoints() {
         char* ptr = strstr(Program, var.Alias);
         while (ptr != NULL)
         {
-            uint16_t size = resolveArgSize(var.Alias);
+            char* ptr2 = ptr;
+            while(*ptr2 != '\n') ptr2--;
+            ptr2++;
+            uint16_t size = resolveArgSize(ptr2);
+            char* Line = (char*)malloc(sizeof(char) * size);
+            memcpy(Line, ptr2, size);
+            char* opcode = strtok(Line, " ");
+            uint16_t opcodeSize = resolveArgSize(opcode);
+            for (int i = 0; i < opcodeSize; i++)
+            {
+                opcode[i] = tolower(opcode[i]);
+            }
+            bool IsRelatve = true;
+            if (strcmp(opcode, "jmp") == 0) IsRelatve = false;
+            if (strcmp(opcode, "call") == 0) IsRelatve = false;
+            if (strcmp(opcode, "ldi") == 0) IsRelatve = false;
+            free(Line);
+            int val = var.Line - var.lineDiff;
+
+            if (IsRelatve) {
+                int CurrLine = resolveLine(ptr) - var.lineDiff -1;
+                val = var.Line - CurrLine;
+            }
+
+            size = resolveArgSize(var.Alias);
             char* lineNb = (char*)malloc(sizeof(char) * size);
-            _itoa(var.Line, lineNb, 10);
+            _itoa(val, lineNb, 10);
             for (int i = 0; i < size; i++)
             {
-                ptr[i]=lineNb[i]>='0'&&lineNb[i]<='9'?lineNb[i]:' ';
+                ptr[i]=(lineNb[i]>='0'&&lineNb[i]<='9')||lineNb[i]=='-'?lineNb[i]:' ';
             }
             free(lineNb);
             ptr = strstr(Program, var.Alias);
         }
+        if(var.Alias!=NULL)free(var.Alias);
     }
 }
 
@@ -1657,6 +1707,7 @@ void SetLines(){
 
 void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
 
+    currentLine = line;
     char* lineStr = NULL;
     lineStr = (char *)malloc(sizeof(char) * 512);
     memcpy(lineStr, Lines[line], 512);
