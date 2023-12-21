@@ -132,8 +132,8 @@ void OutputPix(SDL_Renderer* renderer, SDL_Texture* buffer) {
 
     //printf("outputing pixel, X = %d, Y = %d, color = 0x%x%x\n", registers[17], registers[18], registers[22], registers[21]);
     SDL_Rect rect;
-    rect.x = PIXEL_SIZE*registers[17];
-    rect.y = PIXEL_SIZE*registers[18];
+    rect.x = PIXEL_SIZE*(registers[17]%128);
+    rect.y = PIXEL_SIZE*(registers[18]%64);
     rect.w = PIXEL_SIZE;
     rect.h = PIXEL_SIZE;
     uint16_t color = registers[22] | registers[21]<<8;
@@ -1578,8 +1578,7 @@ void RemoveMacros() {
             {
                 ptr[i] = '\n';
             }
-
-            *ptr = *_itoa(var.Val, NULL, 10);
+            _itoa(var.Val, ptr, 10);
             char* ptr = strstr(Program, var.Alias);
         }
         free(var.Alias);
@@ -1598,6 +1597,7 @@ int resolveLine(char* ptr) {
 }
 
 void ResolvePoints() {
+    int jumpedLines = 0;
     for (int i = 0; i < lineCount; i++)
     {
         char* lineStr = NULL;
@@ -1607,21 +1607,36 @@ void ResolvePoints() {
         char* opcode = strtok(lineStr, " ");
         uint16_t opcodeSize = resolveArgSize(opcode);
 
+        if (strchr(opcode, ':') != NULL) {
+            if (opcode[opcodeSize - 1] != ':') {
+                char * ptr = strchr(opcode, ':');
+                opcodeSize = ptr - opcode + 1;
+                opcode[opcodeSize] = '\0';
+            }
+        }
 
         if (opcode[opcodeSize - 1] == ':') {
             char* Progptr = strstr(Program, opcode);
+            int j = 0;
+            bool IsLabel = true;
+            while (Progptr[opcodeSize + j] != '\n' && Progptr[opcodeSize + j] != '\0') {
+				if(Progptr[opcodeSize + j] != ' ') IsLabel = false;
+				j++;
+			}
             opcode[opcodeSize - 1] = '\0';
             DicoPoint point;
             point.Alias = (char*)malloc(sizeof(char) * opcodeSize);
             strcpy(point.Alias, opcode);
-            point.Line = i + 1 - PointList.size();
-            point.lineDiff = PointList.size() + 1;
+            point.Line = i + 1 - jumpedLines;
+            point.lineDiff = jumpedLines + 1;
             PointList.push_back(point);
+            if (IsLabel) jumpedLines++;
             for (int j = 0; j < opcodeSize; j++)
             {
                 Progptr[j] = ' ';
 			}
         }
+
 
         free(lineStr);
     }
@@ -1667,8 +1682,12 @@ void ResolvePoints() {
             {
                 ptr[i]=(lineNb[i]>='0'&&lineNb[i]<='9')||lineNb[i]=='-'?lineNb[i]:' ';
             }
-            free(lineNb);
+            
+            //if(lineNb != NULL) free(lineNb);
+
             ptr = strstr(Program, var.Alias);
+            
+
         }
         if(var.Alias!=NULL)free(var.Alias);
     }
@@ -1778,7 +1797,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
             arg3[i] = tolower(arg3[i]);
         }
     }
-    /*
+    
     printf("line = %s\n", Lines[line]);
     if (arg3 == NULL) {
         if (arg2 == NULL) {
@@ -1813,7 +1832,7 @@ void Decode_Ins(int line, SDL_Renderer* renderer, SDL_Texture* buffer){
     }
     printf("\n%d\n", resolveVal(arg1));
 
- */  
+ 
     if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputpix") == 0) OutputPix(renderer, buffer);
     if (strcmp(opcode, "rjmp") == 0 && strcmp(arg1, "outputall") == 0) OutputAll(renderer, buffer);
     else if (strcmp(opcode, "ldi") == 0) Ins_LDI((arg1 != NULL) ? Decode_Regiser(arg1) : 0, resolveVal(arg2));
@@ -1984,12 +2003,13 @@ int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
     printf("Program = \n%s\n", Program);
     Format_Program();
     Format_Program();
+    Format_Program();
     SetLines();
-    int i = 0;
+    /*int i = 0;
     while (Program[i] != '\0') {
         printf("Program[%d] = %X\n", i, Program[i]);
         i++;
-    }
+    }*/
     printf("Program = \n%s\n", Program);
     RemoveMacros();
     printf("Program = \n%s\n", Program);
@@ -1999,13 +2019,14 @@ int Start(SDL_Renderer* renderer, SDL_Texture* buffer) {
     Format_Program();
     printf("Program = \n%s\n", Program);
     ResolvePoints();
+    printf("Program = \n%s\n", Program);
     Format_Program();
     Format_Program();
-    i = 0;
+    /*i = 0;
     while (Program[i] != '\0') {
         printf("Program[%d] = %X\n", i, Program[i]);
         i++;
-    }
+    }*/
     printf("Program = \n%s\n", Program);
     //printf("Program = %s\n", Program);
     SetLines();
