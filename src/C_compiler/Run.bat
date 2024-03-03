@@ -1,0 +1,1 @@
+"C:\Users\rapha\AppData\Local\Arduino15\packages\MightyCore\tools\avrdude\7.1-arduino.1/bin/avrdude" "-CC:\Users\rapha\AppData\Local\Arduino15\packages\MightyCore\hardware\avr\2.2.1/avrdude.conf" -v -V -patmega16 -carduino -PCOM1 -b115200 -D "-Uflash:w:D:\DOCUMENTS\GitHub\AVR-dev\arduinoCppCode\image.hex:i"

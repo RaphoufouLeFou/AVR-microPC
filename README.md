@@ -32,3 +32,17 @@ His website : https://eater.net/vga
 
 (NWY) = not working yet
 
+# C compiling
+
+The folder C_compiler include all necessary stuff to compile C code for the microPC
+the asm.S file has some basics functions made for this PC
+the MainC.cpp file has some code example like raytracer and 3D engines build for this PC
+    
+### How to use it 
+    
+- send command :
+
+    To compile or send your code the the microPC, simply type <br>```send <-Optimisation> <Cfile path> <Sfile path> <Compile (-c) or send (-s)>```<br>
+    In this case, you would compile with<br> ```send -O3 MainC.cpp asm.S -c```<br> or compile and send the code to the microPC with<br> ```send -O3 MainC.cpp asm.S -s```<br>
+    <U> WARNING</U> : You need to have the avr-gcc (and avr-g++) compiler installed and in your PATH, and you need to have the avrdude installed and configure the Run.bat file with your own path configuration
+    <br> For more information, type ```send -h``` or ```send help```
