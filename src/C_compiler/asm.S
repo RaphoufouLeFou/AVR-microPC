@@ -180,7 +180,7 @@ drawFillRectLoop:
 	cp     	AdX,	MaxX        		;compare the X address to MaxX
 	brne    drawFillRectLoop       		;if it's not 0x80, jump to the drawFillRectLoop loop
     
-    clr     AdX                 		;reset the X address to 0
+    mov     AdX, r22                 	;reset the X address to 0
     clr     tmp
 	out     _SFR_IO_ADDR(PORTC), tmp	;Clear the ports
     cp     	AdY, MaxY           		;compare the Y address to MaxY
