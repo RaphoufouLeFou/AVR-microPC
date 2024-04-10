@@ -2,30 +2,44 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <link rel="stylesheet" href="main.css">
         <title>AVR-MicroPC</title>
-
-        <a href="index.html"><button>Home</button></a>
-        <a href="Raytracing/index.html"><button>Raytracing</button></a>
-        <a href="Rendering/index.html"></a><button>Rendering</button></a>
-        <a href="Compiling/index.html"></a><button>C/C++ compiling</button></a>
-        <a href="Performance/index.html"><button>Performance</button></a>
-
     </head>
-    <body>
-        <h1 id = "title">AVR-MicroPC</h1>
-        I was inspired a lot from Ben Eater, mainly for the VGA protcol. <a href="https://eater.net/vga" target="_blank">His website</a>
-        
-        <p>AVR based microcomputer outputing VGA
 
-        The code is entirely write in Assembly for better performance from the MCU
-        </p>
-        <h3>AVR-PC Specs :</h3>
-        <ul>   
-            <li>MCU as GPU and CPU : ATmega16A (16K ROM, 1K RAM, 0.5K EEPROM) at 16MHz</li>
-            <li>One CO-CPU as IO expander and for higher storage capacity : ATmega16A (16K ROM, 1K RAM, 0.5K EEPROM) at 16MHz</li>
-            <li>SRAM as VRAM : 128Kb (2x8Ko to make 16Bits colors)</li>
-            <li>VGA Output : 128x64 @16bit, 60Hz</li>
-        </ul>
-    
+    <body>
+        <div id="menu">
+            <a href="index.html">Home</a>
+            <a href="Raytracing/index.html">Raytracing</a>
+            <a href="Rendering/index.html">Rendering</a>
+            <a href="Compiling/index.html">C/C++ compiling</a>
+            <a href="Performance/index.html">Performance</a>
+            <a href="https://github.com/RaphoufouLeFou"><img src="images/github-light-icon-2048x1998-m3c0rgap.png" height=32px></a>
+        </div>
+
+        <div id="title">
+            <h1>AVR-MicroPC</h1>
+        </div>
+        <div id="main"><div>
+            <h2><span>Overview</span></h2>
+
+            <p>
+                I was inspired a lot from Ben Eater, mainly for the VGA protcol. <a href="https://eater.net/vga" target="_blank">His website</a>
+                <br><br>
+                AVR based microcomputer outputing VGA.
+                <br>
+                The code is entirely write in Assembly for better performance from the MCU
+            </p>
+
+            <h4>AVR-PC Specs</h4>
+            <ul>   
+                <li>MCU as GPU and CPU : ATmega16A (16K ROM, 1K RAM, 0.5K EEPROM) at 16MHz</li>
+                <li>One CO-CPU as IO expander and for higher storage capacity : ATmega16A (16K ROM, 1K RAM, 0.5K EEPROM) at 16MHz</li>
+                <li>SRAM as VRAM: 128Kb (2x8Ko to make 16Bits colors)</li>
+                <li>VGA Output: 128x64 @16bit, 60Hz</li>
+            </ul>
+
+            <h2><span>Capabilities</span></h2>
+            <p>It is capable of doing stuff</p>
+        </div></div>
     </body>
 </html>

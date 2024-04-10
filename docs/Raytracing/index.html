@@ -1,17 +1,77 @@
+
 <!DOCTYPE html>
 <html>
     <head>
+        <link rel="stylesheet" href="main.css">
         <title>Raytracing</title>
-
-        <a href="../index.html"><button>Home</button></a>
-        <a href="index.html"><button>Raytracing</button></a>
-        <button>Rendering</button>
-        <button>C/C++ compiling</button>
-        
     </head>
-    <body>
-        <h1 id = "title">Raytracing</h1>
-        Raytracing :
 
+    <body>
+        <div id="menu">
+            <a href="../index.html">Home</a>
+            <a href="index.html">Raytracing</a>
+            <a href="../Rendering/index.html">Rendering</a>
+            <a href="../Compiling/index.html">C/C++ compiling</a>
+            <a href="../Performance/index.html">Performance</a>
+            <a href="https://github.com/RaphoufouLeFou"><img src="../images/github-light-icon-2048x1998-m3c0rgap.png" height=32px></a>
+        </div>
+
+        <div id="title">
+            <h1>Raytracing</h1>
+        </div>
+        <div id="main"><div>
+            <h2><span>Software</span></h2>
+
+            <p>
+                The initial version of the raytracer was developped with python by <a href="https://github.com/d-002" target="_blank">d-002</a>
+                <br>
+                Then, i recoded it in C++, and ported it to the AVR-MicroPC with the <a href="../Compiling/index.html">C/C++ compiler</a>
+                <br>
+                for more information on the C++ compiler, see the <a href="../Compiling/index.html">C/C++ compiling</a> page
+                <br><br>
+                The raytracer uses a raymatching algorithm to trace the ray, and determines the color of eatch pixels. It support having multiples object, like cubes and spheres., a light <source>, a textured floor, and a colored background.
+            </p>
+
+            <h2><span>Performance</span></h2>
+
+            <p>
+                At its base frequency (16MHz), the AVR-MicroPC can render a 128x64 image in aproximatly 30 mins using the first raytracer.
+                <br>
+                Compaired with a classic modern computer, it is very very slow, but it is still impressive for a 16MHz MCU.
+                <br>
+                My personal computer can render the same image almost insantly at the same resolution, and in less than a second at 1920x1080.
+            </p>
+
+            <h2><span>Issues</span></h2>
+
+            <p>
+                The AVR-MicroPC has some visual glitch when rendering an image:
+                <br>
+            </p>
+            <img src="../images/IMG20240209021306.jpg" width=100%>
+            <p>
+                The black dots on the image came from the hardware itself, like the breadboard connections, and cheap cables.
+                <br>
+                these can be avoided with software by sending twice the pixel to the VRAM. This does not increase the render time beacause the pixel is not calculated twice, and sending a pixel takes only a few microseconds.
+                <br><br>
+                also, on the right face of the cube, we can see the reflextion of the floor at the top.
+                <br>
+                This is not normal, and i think it is due to the difference of compiler between the <a href="../Compiling/index.html">C/C++ compiler</a> and the GCC compiler on my PC.
+                On my PC, the reflextion is not there, and the image is rendered correctly like below:
+            </p>
+            <img src="../images/image2.png" width=100%>
+            <p>
+                Also, the background is not the same color, but this is just a different setting.
+            </p>
+
+            <h2><span>Other version</span></h2>
+            <p>
+                <a href="https://github.com/d-002" target="_blank">d-002</a> later recoded his raytracer in C++, so I'v ported it again to my <a href="../Compiling/index.html">C/C++ compiler</a>.
+                <br>
+                This time, he also improved his algorithm, so the render time is way lower.
+                <br> 
+                For an image with a cube and a spheres, the render time is down to an impressive 50s, and even 40s with a bit of overclocking.
+            </p>
+        </div></div>
     </body>
 </html>

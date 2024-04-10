@@ -1,5 +1,5 @@
 @font-face {
-    src: url("OpenSans-Regular.ttf");
+    src: url("../OpenSans-Regular.ttf");
     font-family: opensans;
 }
 
@@ -11,7 +11,7 @@ html, body {
 }
 
 body {
-    background-image: url("images/IMG20231124154420.jpg");
+    background-image: url("../images/IMG20240209202521.jpg");
 	background-size: cover;
 	background-position: center;
 	background-attachment: fixed;
