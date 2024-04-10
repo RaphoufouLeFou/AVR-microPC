@@ -13,12 +13,12 @@
 #define BLUE 0x001F
 #define WHITE 0xFFFF
 
-//#define FIRST_RTX
-//#define LEO_RTX
+#define FIRST_RTX
+#define LEO_RTX
 #define RAPH_RENDERER
-//#define RAPH_RENDERER_LINES
-//#define COM_RECV 
-//#define COM_SEND
+#define RAPH_RENDERER_LINES
+#define COM_RECV 
+#define COM_SEND
 
 #ifdef FIRST_RTX
 
